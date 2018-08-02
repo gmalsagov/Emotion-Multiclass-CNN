@@ -4,9 +4,15 @@
   - This is a **multi-class text classification** problem.
   - The goal of this project is to **classify ISEAR Emotion Dataset into 7 classes**.
   - This model was built with **CNN and Word Embeddings** on **Tensorflow**.
-  - Accuracy on test set: 62.5%
+  - Results:
 
-### Data: [ISEAR dataset] 
+    Model                   | Accuracy
+    ------------------------|----------
+    CNN w/o Word Embeddings | N/A
+    CNN with word2vec       | 62.5%
+    CNN with glovec         | N/A
+
+### Data: ISEAR Emotion Dataset
 ### Source: http://www.affective-sciences.org/home/research/materials-and-online-research/research-material
   - Input: **Tweets**
   - Output: **Emotions**
