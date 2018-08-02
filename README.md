@@ -12,8 +12,8 @@
     Model                   | Accuracy
     ------------------------|----------
     CNN w/o Word Embeddings | N/A
-    CNN with word2vec       | 62.5%
-    CNN with glovec         | N/A
+    CNN with Word2Vec       | 62.5%
+    CNN with GloVec         | N/A
 
 ### Data: ISEAR Emotion Dataset<br> (http://www.affective-sciences.org/home/research/materials-and-online-research/research-material)
   - Input: **Emotion annotated tweets**
