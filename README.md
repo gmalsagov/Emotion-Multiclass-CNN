@@ -15,11 +15,16 @@
     Emotion | Tweet
     --------|-----------------------------------------------------------
     joy     | On days when I feel close to my partner and other friends.
+    --------|-----------------------------------------------------------
+
             | When I feel at peace with myself and also experience a 
             | close contact with people whom I regard greatly.
+
     --------|-----------------------------------------------------------
     fear    | Every time I imagine that someone I love or I could contact 
             | a serious illness, even death.
+    --------|-----------------------------------------------------------
+
     --------|-----------------------------------------------------------
     sadness | When I think about the short time that we live and relate
             | it to the periods of my life when I think that I did not  
