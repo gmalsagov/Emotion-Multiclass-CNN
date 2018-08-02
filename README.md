@@ -7,13 +7,14 @@
 
 ### Results:
 
+  - Table of model accuracies
     Model                   | Accuracy
     ------------------------|----------
     CNN w/o Word Embeddings | N/A
     CNN with word2vec       | 62.5%
     CNN with glovec         | N/A
 
-### Data: ISEAR Emotion Dataset (http://www.affective-sciences.org/home/research/materials-and-online-research/research-material)
+### Data: ISEAR Emotion Dataset<br> (http://www.affective-sciences.org/home/research/materials-and-online-research/research-material)
   - Input: **Emotion annotated tweets**
   - Output: **Emotions**
   - Examples:
@@ -29,7 +30,7 @@
 
 
 ### Parameters:
-  - batch_size
+  - batch_size:
   - dropout_keep_prob:
   - embedding_dim:
   - evaluate_every:
