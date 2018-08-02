@@ -44,11 +44,11 @@
   - num_filters:
 
 ### Requirements:
-  #Google Pre-trained News Word2Vec
+  ##Google Pre-trained News Word2Vec
   - Source: https://code.google.com/archive/p/word2vec/
   - Download: https://drive.google.com/file/d/0B7XkCwpI5KDYNlNUTTlSS21pQmM/edit
 
-  #Stanford Pre-trained GloVe Twitter 27B
+  ##Stanford Pre-trained GloVe Twitter 27B
   - Source: https://nlp.stanford.edu/projects/glove/
   - Download: http://nlp.stanford.edu/data/glove.twitter.27B.zip
 
