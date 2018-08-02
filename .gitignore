@@ -1,0 +1,5 @@
+# Ignore file
+GoogleNews-vectors-negative300.bin
+
+# Ignore folder
+embeddings/
