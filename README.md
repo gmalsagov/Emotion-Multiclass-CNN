@@ -23,11 +23,11 @@
     Emotion | Tweet
     --------|------------------------------------------------------------------------------------------------------
     joy     | On days when I feel close to my partner and other friends. When I feel at peace with myself and also <br>experience a close contact with people whom I regard greatly.
-    fear    | Every time I imagine that someone I love or I could contact <br>a serious illness, even death.
-    sadness | When I think about the short time that we live and relate<br>it to the periods of my life when I think that I did not<br>use this short time.
-    disgust | At a gathering I found myself involuntarily sitting next to two<br> people who expressed opinions that I considered very <br>low and discriminating.
-    shame   | When I realized that I was directing the feelings of discontent<br> with myself at my partner and this way was trying to <br>put the blame on him instead of sorting out my own feeliings.
-    guilt   | I feel guilty when when I realize that I consider material things <br> more important than caring for my relatives. I feel <br> very self-centered.
+    fear    | Every time I imagine that someone I love or I could contact a serious illness, even death.
+    sadness | When I think about the short time that we live and relate it to the periods of my life when I think <br> that I did not use this short time.
+    disgust | At a gathering I found myself involuntarily sitting next to two people who expressed opinions that <br> I considered very low and discriminating.
+    shame   | When I realized that I was directing the feelings of discontent with myself at my partner and this <br> way was trying to put the blame on him instead of sorting out my own feeliings.
+    guilt   | I feel guilty when when I realize that I consider material things more important than caring for <br> my relatives. I feel very self-centered.
 
 
 ### Parameters:
