@@ -16,7 +16,7 @@
     CNN with GloVe          | 61.6%
 
 ### Data: ISEAR Emotion Dataset<br> (http://www.affective-sciences.org/home/research/materials-and-online-research/research-material)
-  - Input: **Emotion annotated tweets**
+  - Input: **Emotion rich tweets**
   - Output: **Emotions**
   - Examples:
 
