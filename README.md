@@ -13,7 +13,7 @@
     ------------------------|----------
     CNN w/o Word Embeddings | 57.4%
     CNN with Word2Vec       | 62.5%
-    CNN with GloVec         | 61.6%
+    CNN with GloVe          | 61.6%
 
 ### Data: ISEAR Emotion Dataset<br> (http://www.affective-sciences.org/home/research/materials-and-online-research/research-material)
   - Input: **Emotion annotated tweets**
@@ -44,9 +44,13 @@
   - num_filters:
 
 ### Requirements:
-  - Google Pre-trained Word2Vec
+  - Google Pre-trained News Word2Vec
   - Source: https://code.google.com/archive/p/word2vec/
   - Download: https://drive.google.com/file/d/0B7XkCwpI5KDYNlNUTTlSS21pQmM/edit
+
+  - Stanford Pre-trained GloVe Twitter 27B
+  - Source: https://nlp.stanford.edu/projects/glove/
+  - Download: http://nlp.stanford.edu/data/glove.twitter.27B.zip
 
 ### Train:
   - Command: python train.py
