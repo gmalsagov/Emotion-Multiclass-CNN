@@ -7,7 +7,8 @@
 
 ### Results:
 
-  - Table of model accuracies
+  - Table of model accuracies:
+
     Model                   | Accuracy
     ------------------------|----------
     CNN w/o Word Embeddings | N/A
