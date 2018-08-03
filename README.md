@@ -17,7 +17,7 @@
 
 ### Confusion Matrix:
 
-![alt text](confusion_matrix.png.png "Description goes here")
+![alt text](confusion_matrix.png "Description goes here")
 
 [[http://github.com/Emotion-Multiclass-CNN/confusion_matrix.png|alt=octocat]]
 
