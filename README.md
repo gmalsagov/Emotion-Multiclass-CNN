@@ -17,10 +17,7 @@
 
 ### Confusion Matrix:
 
-![alt text](confusion_matrix.png "Description goes here")
-
-[[http://github.com/Emotion-Multiclass-CNN/confusion_matrix.png|alt=octocat]]
-
+![alt text](confusion_matrix.png "Confusion matrix for CNN trained with GloVe Word Embeddings")
 
 ### Data: ISEAR Emotion Dataset<br> (http://www.affective-sciences.org/home/research/materials-and-online-research/research-material)
   - Input: **Emotion rich tweets**
