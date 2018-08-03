@@ -15,6 +15,10 @@
     CNN with Word2Vec       | 62.5%
     CNN with GloVe          | 64.0%
 
+### Confusion Matrix:
+
+![alt text](http://github.com/Emotion-Multiclass-CNN/confusion_matrix.png
+
 ### Data: ISEAR Emotion Dataset<br> (http://www.affective-sciences.org/home/research/materials-and-online-research/research-material)
   - Input: **Emotion rich tweets**
   - Output: **Emotions**
