@@ -8,6 +8,6 @@
     "l2_reg_lambda": 0.5,
     "max_pool_size": 4,
     "non_static": false,
-    "num_epochs": 20,
+    "num_epochs": 6,
     "num_filters": 128
 }

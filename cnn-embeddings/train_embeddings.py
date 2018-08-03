@@ -5,12 +5,14 @@ import time
 import datetime
 import numpy as np
 import tensorflow as tf
-from sklearn.cross_validation import train_test_split
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
 from tensorflow.contrib import learn
 import sys
 sys.path.append('../')
 import data_helper
 from cnn_embeddings import TextCNN
+from sklearn.metrics import classification_report, confusion_matrix
 
 logging.getLogger().setLevel(logging.INFO)
 
@@ -62,6 +64,7 @@ def train_cnn():
                 num_filters=params['num_filters'], embedding_mat=embedding_mat,
                 l2_reg_lambda=params['l2_reg_lambda'])
 
+            # Optimizing our loss function using Adam's optimizer
             global_step = tf.Variable(0, name="global_step", trainable=False)
             optimizer = tf.train.AdamOptimizer(1e-3)
             grads_and_vars = optimizer.compute_gradients(cnn.loss)
@@ -81,6 +84,10 @@ def train_cnn():
             out_dir = os.path.abspath(os.path.join(os.path.curdir, "trained_model_" + timestamp))
             print("Writing to {}\n".format(out_dir))
 
+            # Summary for predictions
+            # predictions_summary = tf.summary.scalar("predictions", cnn.predictions)
+
+
             # Summaries for loss and accuracy
             loss_summary = tf.summary.scalar("loss", cnn.loss)
             acc_summary = tf.summary.scalar("accuracy", cnn.accuracy)
@@ -99,7 +106,7 @@ def train_cnn():
             checkpoint_prefix = os.path.join(checkpoint_dir, "model")
             if not os.path.exists(checkpoint_dir):
                 os.makedirs(checkpoint_dir)
-            saver = tf.train.Saver(tf.all_variables())
+            saver = tf.train.Saver(tf.global_variables())
 
             # One training step: train the model with one batch
             def train_step(x_batch, y_batch):
@@ -117,24 +124,25 @@ def train_cnn():
             def dev_step(x_batch, y_batch, writer=None):
                 feed_dict = {cnn.input_x: x_batch, cnn.input_y: y_batch,
                              cnn.dropout_keep_prob: 1.0}
-                step, summaries, loss, acc, num_correct = \
-                    sess.run([global_step, dev_summary_op, cnn.loss, cnn.accuracy, cnn.num_correct],
+                step, summaries, loss, acc, num_correct, predictions = \
+                    sess.run([global_step, dev_summary_op, cnn.loss, cnn.accuracy, cnn.num_correct, cnn.predictions],
                              feed_dict)
                 if writer:
                     writer.add_summary(summaries, step)
-                return num_correct
+                return num_correct, predictions
 
             # Save the word_to_id map since predict.py needs it
             vocab_processor.save(os.path.join(out_dir, "vocab.pickle"))
-            sess.run(tf.initialize_all_variables())
+            sess.run(tf.global_variables_initializer())
 
             print "Loading Embeddings !"
 
-            embedding_dimension = 200;
+            embedding_dimension = 200
             embedding_dir = '../embeddings/glove.twitter.27B/glove.twitter.27B.200d.txt'
             # embedding_dir = '../GoogleNews-vectors-negative300.bin'
 
             initW = data_helper.load_embedding_vectors_glove(vocab_processor.vocabulary_, embedding_dir, embedding_dimension)
+            # initW = data_helper.load_embedding_vectors_word2vec(vocab_processor.vocabulary_, embedding_dir, embedding_dimension)
             sess.run(cnn.W.assign(initW))
 
             print "Loaded Embeddings !"
@@ -163,7 +171,7 @@ def train_cnn():
                         if len(dev_batch) == 0:
                             continue
                         x_dev_batch, y_dev_batch = zip(*dev_batch)
-                        num_dev_correct = dev_step(x_dev_batch, y_dev_batch)
+                        num_dev_correct, y_pred_tre = dev_step(x_dev_batch, y_dev_batch)
                         total_dev_correct += num_dev_correct
 
                     dev_accuracy = float(total_dev_correct) / len(y_dev)
@@ -176,6 +184,8 @@ def train_cnn():
                         logging.critical('Saved model {} at step {}'.format(path, best_at_step))
                         logging.critical('Best accuracy {} at step {}'.format(best_accuracy, best_at_step))
 
+            classes = ["joy", "fear", "anger", "sadness", "disgust", "shame", "guilt"]
+
             """Step 7: predict x_test (batch by batch)"""
             test_batches = data_helper.batch_iter(list(zip(x_test, y_test)), params['batch_size'], 1)
             total_test_correct = 0
@@ -184,10 +194,10 @@ def train_cnn():
                     continue
                 print "Non Zero Length"
                 x_test_batch, y_test_batch = zip(*test_batch)
-                num_test_correct = dev_step(x_test_batch, y_test_batch)
+                num_test_correct, y_pred = dev_step(x_test_batch, y_test_batch)
                 total_test_correct += num_test_correct
 
-            test_accuracy = float(total_test_correct) / len(y_test)
+            test_accuracy = (float(total_test_correct) / len(y_test))*100
 
             train_batches = data_helper.batch_iter(list(zip(x_train, y_train)), params['batch_size'], 1)
 
@@ -197,14 +207,29 @@ def train_cnn():
                     continue
                 print "Non Zero Length"
                 x_train_batch, y_train_batch = zip(*train_batch)
-                num_test_correct = dev_step(x_train_batch, y_train_batch)
+                num_test_correct, y_ = dev_step(x_train_batch, y_train_batch)
                 total_train_correct += num_test_correct
 
-            train_accuracy = float(total_train_correct) / len(y_train)
+            train_accuracy = (float(total_train_correct) / len(y_train))*100
 
         print 'Accuracy on test set is {} based on the best model'.format(test_accuracy)
         print 'Accuracy on train set is {} based on the best model'.format(train_accuracy)
         # logging.critical('Accuracy on test set is {} based on the best model {}'.format(test_accuracy, path))
+
+        print(len(y_test_batch))
+        print(y_test_batch[0])
+        print(len(y_pred))
+        print(y_pred[0])
+        # Y_test = np.argmax(y_test_batch, axis=1)
+        # y_pred_class = np.argmax(y_pred, axis=1)
+
+        print(classification_report(y_test_batch, y_pred, target_names=classes))
+
+        # # Create confusion matrix
+        # cnf_matrix = confusion_matrix(Y_test, y_pred_class)
+        # plt.figure(figsize=(20, 10))
+        # data_helper.plot_confusion_matrix(cnf_matrix, labels=classes)
+
         logging.critical('The training is complete')
 
 
