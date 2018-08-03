@@ -13,7 +13,7 @@
     ------------------------|----------
     CNN w/o Word Embeddings | 57.4%
     CNN with Word2Vec       | 62.5%
-    CNN with GloVe          | 61.6%
+    CNN with GloVe          | 64.0%
 
 ### Data: ISEAR Emotion Dataset<br> (http://www.affective-sciences.org/home/research/materials-and-online-research/research-material)
   - Input: **Emotion rich tweets**
