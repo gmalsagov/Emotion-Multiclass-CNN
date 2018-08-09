@@ -16,6 +16,7 @@ class TextCNN(object):
         self.input_x = tf.placeholder(tf.int32, [None, sequence_length], name="input_x")
         self.input_y = tf.placeholder(tf.float32, [None, num_classes], name="input_y")
         self.dropout_keep_prob = tf.placeholder(tf.float32, name="dropout_keep_prob")
+        # self.is_training = tf.placeholder(tf.bool, name="is_training")
 
         # Embedding layer mapping vocabulary word indices into low-dimensional vector representations
         with tf.device('/cpu:0'), tf.name_scope("embedding"):
@@ -55,13 +56,15 @@ class TextCNN(object):
         self.h_pool_flat = tf.reshape(self.h_pool, [-1, num_filters_total])
 
         # Add dropout
+
+        # if is_training:/
         with tf.name_scope("dropout"):
-            self.h_drop = tf.nn.dropout(self.h_pool_flat, self.dropout_keep_prob)
+            self.h_pool_flat = tf.nn.dropout(self.h_pool_flat, self.dropout_keep_prob)
 
         with tf.name_scope("output"):
             W = tf.Variable(tf.truncated_normal([num_filters_total, num_classes], stddev=0.1), name="W")
             b = tf.Variable(tf.constant(0.1, shape=[num_classes]), name="b")
-            self.scores = tf.nn.xw_plus_b(self.h_drop, W, b, name="scores")
+            self.scores = tf.nn.xw_plus_b(self.h_pool_flat, W, b, name="scores")
             self.predictions = tf.argmax(self.scores, 1, name="predictions")
 
         # Calculate mean cross-entropy loss
@@ -73,6 +76,10 @@ class TextCNN(object):
         with tf.name_scope("accuracy"):
             correct_predictions = tf.equal(self.predictions, tf.argmax(self.input_y, 1))
             self.accuracy = tf.reduce_mean(tf.cast(correct_predictions, "float"), name="accuracy")
+
+        with tf.name_scope('num_correct'):
+            correct_predictions = tf.equal(self.predictions, tf.argmax(self.input_y, 1))
+            self.num_correct = tf.reduce_sum(tf.cast(correct_predictions, 'float'), name='num_correct')
 
 
 

@@ -1,0 +1,5 @@
+model_checkpoint_path: "/Users/German/Desktop/Project/Algorithms/Emotion-Multiclass-CNN/cnn-basic/runs/1533743110/checkpoints/model-800"
+all_model_checkpoint_paths: "/Users/German/Desktop/Project/Algorithms/Emotion-Multiclass-CNN/cnn-basic/runs/1533743110/checkpoints/model-200"
+all_model_checkpoint_paths: "/Users/German/Desktop/Project/Algorithms/Emotion-Multiclass-CNN/cnn-basic/runs/1533743110/checkpoints/model-400"
+all_model_checkpoint_paths: "/Users/German/Desktop/Project/Algorithms/Emotion-Multiclass-CNN/cnn-basic/runs/1533743110/checkpoints/model-600"
+all_model_checkpoint_paths: "/Users/German/Desktop/Project/Algorithms/Emotion-Multiclass-CNN/cnn-basic/runs/1533743110/checkpoints/model-800"

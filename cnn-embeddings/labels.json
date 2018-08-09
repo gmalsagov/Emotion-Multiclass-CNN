@@ -1,9 +1,9 @@
 [
-    "anger", 
-    "disgust", 
-    "fear", 
-    "guilt", 
     "joy", 
+    "fear", 
+    "anger", 
     "sadness", 
-    "shame"
+    "disgust", 
+    "shame", 
+    "guilt"
 ]

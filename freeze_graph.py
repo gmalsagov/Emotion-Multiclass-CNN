@@ -8,22 +8,24 @@ import tensorflow as tf
 dir = os.path.dirname(os.path.realpath(__file__))
 
 
-# with tf.Graph().as_default():
-#
-#     global_step = tf.Variable(0,name='global_step', trainable=False)
-#     init_op = tf.global_variables_initializer()
-#
-#     session_conf = tf.ConfigProto(allow_soft_placement=True, log_device_placement=False)
-#     sess = tf.Session(config=session_conf)
-#
-#     sess.run(init_op)
-#
-#     saver = tf.train.Saver()
-#
-#     saver.restore(sess, './checkpoints_1532474358/model-4800')
-#     # Save model graph
-#     tf_graph = sess.graph
-#     tf.train.write_graph(tf_graph.as_graph_def(), 'freeze', 'graph.pbtxt', as_text=True)
+def create_graph(model_dir):
+
+    with tf.Graph().as_default():
+
+        global_step = tf.Variable(0,name='global_step', trainable=False)
+        init_op = tf.global_variables_initializer()
+
+        session_conf = tf.ConfigProto(allow_soft_placement=True, log_device_placement=False)
+        sess = tf.Session(config=session_conf)
+
+        sess.run(init_op)
+
+        saver = tf.train.Saver()
+
+        saver.restore(sess, model_dir)
+        # Save model graph
+        tf_graph = sess.graph
+        tf.train.write_graph(tf_graph.as_graph_def(), model_dir, 'graph.pbtxt', as_text=True)
 
 
 
@@ -50,7 +52,7 @@ def freeze_graph(model_dir):
 
     # We precise the file fullname of our freezed graph
     absolute_model_dir = "/".join(input_checkpoint.split('/')[:-1])
-    output_graph = absolute_model_dir + "/freeze/graph.pbtxt"
+    output_graph = absolute_model_dir + "/graph.pbtxt"
 
     output_node_names = 'output/predictions'
 
@@ -69,13 +71,17 @@ def freeze_graph(model_dir):
         output_graph_def = tf.graph_util.convert_variables_to_constants(
             sess,  # The session is used to retrieve the weights
             tf.get_default_graph().as_graph_def(),  # The graph_def is used to retrieve the nodes
-            output_node_names.split(",")  # The output node names are used to select the usefull nodes
+            output_node_names.split(",")  # The output node names are used to select the useful nodes
         )
+        with tf.gfile.FastGFile('./frozen_embeddings.pb', 'wb') as f:
+            f.write(output_graph_def.SerializeToString())
 
         # Finally we serialize and dump the output graph to the filesystem
-        with tf.gfile.GFile(output_graph, "wb") as f:
-            f.write(output_graph_def.SerializeToString())
+        # with tf.gfile.GFile(output_graph, "wb") as f:
+        #     f.write(output_graph_def.SerializeToString())
         print("%d ops in the final graph." % len(output_graph_def.node))
+
+
 
     # return output_graph_def
 
@@ -88,5 +94,6 @@ def freeze_graph(model_dir):
 
     # freeze_graph(args.model_dir, args.output_node_names)
 
+# create_graph('cnn-embeddings/64%_trained_model_1533293830/checkpoints')
 
-freeze_graph('./checkpoints_1532533517')
+freeze_graph('cnn-embeddings/trained_model_1533645440/checkpoints')

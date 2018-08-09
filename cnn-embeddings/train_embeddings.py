@@ -11,7 +11,7 @@ from tensorflow.contrib import learn
 import sys
 sys.path.append('../')
 import data_helper
-from cnn_embeddings import TextCNN
+from cnn_embeddings import CNNEmbeddings
 from sklearn.metrics import classification_report, confusion_matrix
 
 logging.getLogger().setLevel(logging.INFO)
@@ -19,32 +19,49 @@ logging.getLogger().setLevel(logging.INFO)
 
 def train_cnn():
     """Step 0: load sentences, labels, and training parameters"""
-    train_file = '../data/iseardataset.csv'
-    x_raw, y_raw, df, labels, embedding_mat = data_helper.load_data_and_labels(train_file)
+    # train_file = '../data/iseardataset.csv'
+    test_set = '../data/isear_test.csv'
+    train_set = '../data/isear_train.csv'
+
+    # x_raw, y_raw, df, labels, embedding_mat = data_helper.load_data_and_labels(train_file)
+
+    classes = ["joy", "fear", "anger", "sadness", "disgust", "shame", "guilt"]
+
+    # Load data
+    print("Loading data...")
+
+    # Load train/validation data
+    x_raw, y_raw = data_helper.load(train_set)
+
+    # Load test data
+    x_test, y_test = data_helper.load(test_set)
+
 
     parameter_file = '../training_config.json'
     params = json.loads(open(parameter_file).read())
 
     """Step 1: pad each sentence to the same length and map each word to an id"""
     max_document_length = max([len(x.split(' ')) for x in x_raw])
+    max_document_length2 = max([len(x.split(' ')) for x in x_test])
+    if max_document_length2 > max_document_length:
+        max_document_length = max_document_length2
+
     logging.info('The maximum length of all sentences: {}'.format(max_document_length))
     vocab_processor = learn.preprocessing.VocabularyProcessor(max_document_length)
     x = np.array(list(vocab_processor.fit_transform(x_raw)))
     y = np.array(y_raw)
 
-    # print x.shape
-    """Step 2: split the original dataset into train and test sets"""
-    x_, x_test, y_, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
+    x_test = np.array(list(vocab_processor.fit_transform(x_test)))
 
     """Step 3: shuffle the train set and split the train set into train and dev sets"""
-    shuffle_indices = np.random.permutation(np.arange(len(y_)))
-    x_shuffled = x_[shuffle_indices]
-    y_shuffled = y_[shuffle_indices]
-    x_train, x_dev, y_train, y_dev = train_test_split(x_shuffled, y_shuffled, test_size=0.2)
+    shuffle_indices = np.random.permutation(np.arange(len(y_raw)))
+    x_shuffled = x[shuffle_indices]
+    y_shuffled = y[shuffle_indices]
+    x_train, x_dev, y_train, y_dev = train_test_split(x_shuffled, y_shuffled, test_size=0.1)
 
     """Step 4: save the labels into labels.json since predict.py needs it"""
     with open('./labels.json', 'w') as outfile:
-        json.dump(labels, outfile, indent=4)
+        json.dump(classes, outfile, indent=4)
 
     logging.info('x_train: {}, x_dev: {}, x_test: {}'.format(len(x_train), len(x_dev), len(x_test)))
     logging.info('y_train: {}, y_dev: {}, y_test: {}'.format(len(y_train), len(y_dev), len(y_test)))
@@ -55,13 +72,13 @@ def train_cnn():
         session_conf = tf.ConfigProto(allow_soft_placement=True, log_device_placement=False)
         sess = tf.Session(config=session_conf)
         with sess.as_default():
-            cnn = TextCNN(
+            cnn = CNNEmbeddings(
                 sequence_length=x_train.shape[1],
                 num_classes=y_train.shape[1],
-                vocab_size=9000,
+                vocab_size=8002,
                 embedding_size=params['embedding_dim'],
                 filter_sizes=list(map(int, params['filter_sizes'].split(","))),
-                num_filters=params['num_filters'], embedding_mat=embedding_mat,
+                num_filters=params['num_filters'],
                 l2_reg_lambda=params['l2_reg_lambda'])
 
             # Optimizing our loss function using Adam's optimizer
@@ -183,8 +200,11 @@ def train_cnn():
                         path = saver.save(sess, checkpoint_prefix, global_step=current_step)
                         logging.critical('Saved model {} at step {}'.format(path, best_at_step))
                         logging.critical('Best accuracy {} at step {}'.format(best_accuracy, best_at_step))
+            logging.critical('Training is complete, testing the best model on x_test and y_test')
 
-            classes = ["joy", "fear", "anger", "sadness", "disgust", "shame", "guilt"]
+            # Save model graph
+            tf_graph = sess.graph
+            tf.train.write_graph(tf_graph.as_graph_def(), checkpoint_dir, 'graph.pbtxt', as_text=True)
 
             """Step 7: predict x_test (batch by batch)"""
             test_batches = data_helper.batch_iter(list(zip(x_test, y_test)), params['batch_size'], 1)
@@ -216,19 +236,21 @@ def train_cnn():
         print 'Accuracy on train set is {} based on the best model'.format(train_accuracy)
         # logging.critical('Accuracy on test set is {} based on the best model {}'.format(test_accuracy, path))
 
-        print(len(y_test_batch))
-        print(y_test_batch[0])
-        print(len(y_pred))
-        print(y_pred[0])
-        # Y_test = np.argmax(y_test_batch, axis=1)
-        # y_pred_class = np.argmax(y_pred, axis=1)
+        # print(len(y_test_batch))
+        # print(y_test_batch[0])
+        # print(len(y_pred))
+        # print(y_pred)
 
-        print(classification_report(y_test_batch, y_pred, target_names=classes))
+        # Convert one hot into integer
+        y_test_class = np.argmax(y_test_batch, axis=1)
+        # print(y_test_class)
 
-        # # Create confusion matrix
-        # cnf_matrix = confusion_matrix(Y_test, y_pred_class)
-        # plt.figure(figsize=(20, 10))
-        # data_helper.plot_confusion_matrix(cnf_matrix, labels=classes)
+        print(classification_report(y_test_class, y_pred, target_names=classes))
+
+        # Create confusion matrix
+        cnf_matrix = confusion_matrix(y_test_class, y_pred)
+        plt.figure(figsize=(20, 10))
+        data_helper.plot_confusion_matrix(cnf_matrix, labels=classes)
 
         logging.critical('The training is complete')
 

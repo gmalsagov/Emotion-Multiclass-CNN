@@ -1,3 +1,6 @@
+import csv
+import random
+
 import os
 import re
 import matplotlib.pyplot as plt
@@ -148,6 +151,38 @@ def batch_iter(data, batch_size, num_epochs, shuffle=True):
             yield shuffled_data[start_index:end_index]
 
 def load_data(filename):
+
+    sentences = []
+    labels = []
+
+    with open(filename) as csvfile:
+        reader = csv.reader(csvfile, delimiter=',')
+        for row in reader:
+            sentences.append(row[1])
+            labels.append(row[0])
+
+    # Get all classes
+    classes = sorted(list(set(labels)))
+
+    # Encode labels into one-hot vectors
+    labels = pd.get_dummies(labels, columns=classes).values.tolist()
+
+    x_raw = map(clean_str, sentences)
+    y_raw = labels
+
+    # x_raw = pad_sentences(x_raw)
+    vocabulary, vocabulary_inv = build_vocab(x_raw)
+
+    x = np.array([[vocabulary[word] for word in sentence] for sentence in x_raw])
+
+    x_raw = np.array(x_raw)
+    y = np.array(y_raw)
+
+    return x_raw, y
+
+
+def load(filename):
+
     df = pd.read_csv(filename)
     selected = ['label', 'text']
     non_selected = list(set(df.columns) - set(selected))
@@ -175,6 +210,162 @@ def load_data(filename):
     y = np.array(y_raw)
 
     return x_raw, y
+
+
+def split_train_test_data(filename):
+
+    classes = ["joy", "fear", "anger", "sadness", "disgust", "shame", "guilt"]
+
+    df = pd.read_csv(filename)
+    selected = ['label', 'text']
+    non_selected = list(set(df.columns) - set(selected))
+
+    df = df.drop(non_selected, axis=1)  # Drop non selected columns
+    df = df.dropna(axis=0, how='any', subset=selected)  # Drop null rows
+    df = df.reindex(np.random.permutation(df.index))  # Shuffle the dataframe
+    df = df[0:100000]
+
+    sentences = df[selected[1]].apply(lambda x: clean_str(x)).tolist()
+    labels = df[selected[0]].tolist()
+
+    # sentences = []
+    # labels = []
+
+    # with open(filename) as csvfile:
+    #     reader = csv.reader(csvfile, delimiter=',')
+    #     reader.next() # skip header line
+    #     for row in reader:
+    #         print(row[1])
+    #         # sentences.append(row[1])
+    #         # labels.append(row[0])
+    #
+    # print(sentences[0])
+    # print(labels[0])
+
+    joy = []
+    fear= []
+    anger= []
+    sadness= []
+    disgust= []
+    shame= []
+    guilt= []
+
+    for i, e in enumerate(labels):
+        if e == classes[0]:
+            joy.append(sentences[i])
+        elif e == classes[1]:
+            fear.append(sentences[i])
+        elif e == classes[2]:
+            anger.append(sentences[i])
+        elif e == classes[3]:
+            sadness.append(sentences[i])
+        elif e == classes[4]:
+            disgust.append(sentences[i])
+        elif e == classes[5]:
+            shame.append(sentences[i])
+        elif e == classes[6]:
+            guilt.append(sentences[i])
+
+    train_sentences = []
+    train_labels = []
+    test_labels = []
+
+    count = 0
+
+    joy_count = len(joy)
+    fear_count = len(fear)
+    anger_count = len(anger)
+    sadness_count = len(sadness)
+    disgust_count = len(disgust)
+    shame_count = len(shame)
+    guilt_count = len(guilt)
+
+    while count < int(0.8 * joy_count):
+        i = random.choice(range(len(joy)))
+        train_sentences.append(joy[i])
+        train_labels.append('joy')
+        del joy[i]
+        count = count + 1
+    count = 0
+    while count < int(0.8 * fear_count):
+        i = random.choice(range(len(fear)))
+        train_sentences.append(fear[i])
+        train_labels.append('fear')
+        del fear[i]
+        count = count + 1
+    count = 0
+    while count < int(0.8 * anger_count):
+        i = random.choice(range(len(anger)))
+        train_sentences.append(anger[i])
+        train_labels.append('anger')
+        del anger[i]
+        count = count + 1
+    count = 0
+
+    while count < int(0.8 * sadness_count):
+        i = random.choice(range(len(sadness)))
+        train_sentences.append(sadness[i])
+        train_labels.append('sadness')
+        del sadness[i]
+        count = count + 1
+    count = 0
+    while count < int(0.8 * disgust_count):
+        i = random.choice(range(len(disgust)))
+        train_sentences.append(disgust[i])
+        train_labels.append('disgust')
+        del disgust[i]
+        count = count + 1
+    count = 0
+    while count < int(0.8 * shame_count):
+        i = random.choice(range(len(shame)))
+        train_sentences.append(shame[i])
+        train_labels.append('shame')
+        del shame[i]
+        count = count + 1
+    count = 0
+    while count < int(0.8 * guilt_count):
+        i = random.choice(range(len(guilt)))
+        train_sentences.append(guilt[i])
+        train_labels.append('guilt')
+        del guilt[i]
+        count = count + 1
+
+    test_sentences = joy + fear + anger + sadness + disgust + shame + guilt
+    for x in joy:
+        test_labels.append('joy')
+    for x in fear:
+        test_labels.append('fear')
+    for x in anger:
+        test_labels.append('anger')
+    for x in sadness:
+        test_labels.append('sadness')
+    for x in disgust:
+        test_labels.append('disgust')
+    for x in shame:
+        test_labels.append('shame')
+    for x in guilt:
+        test_labels.append('guilt')
+
+    # print(train_sentences[0])
+    # print(test_sentences[0])
+    # print(train_labels[0])
+    # print(test_labels[0])
+    # print(len(train_sentences))
+    # print(len(test_sentences))
+    # print(len(train_labels))
+    # print(len(test_labels))
+
+    with open('./data/isear_train.csv', 'wb') as f:
+        writer = csv.writer(f)
+        writer.writerow(["label", "text"])
+        writer.writerows(itertools.izip(train_labels, train_sentences))
+
+    with open('./data/isear_test.csv', 'wb') as f:
+        writer = csv.writer(f)
+        writer.writerow(["label", "text"])
+        writer.writerows(itertools.izip(test_labels, test_sentences))
+
+    return
 
 
 def build_word_embedding_mat(word_vecs, vocabulary_inv, k=300):
@@ -290,7 +481,9 @@ def plot_confusion_matrix(cm, labels,
     plt.tight_layout()
     plt.ylabel('True label')
     plt.xlabel('Predicted label')
+    plt.show()
 
 if __name__ == "__main__":
-    train_file = './data/train.csv.zip'
-    load_data(train_file)
+
+    split_train_test_data('./data/iseardataset.csv')
+    # load_data('./data/isear_train.csv')

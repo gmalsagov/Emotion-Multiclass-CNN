@@ -1,0 +1,6 @@
+model_checkpoint_path: "/Users/German/Desktop/Project/Algorithms/Emotion-Multiclass-CNN/cnn-embeddings/trained_model_1533645440best_model.ckpt"
+all_model_checkpoint_paths: "/Users/German/Desktop/Project/Algorithms/Emotion-Multiclass-CNN/cnn-embeddings/trained_model_1533645440/checkpoints/model-600"
+all_model_checkpoint_paths: "/Users/German/Desktop/Project/Algorithms/Emotion-Multiclass-CNN/cnn-embeddings/trained_model_1533645440/checkpoints/model-700"
+all_model_checkpoint_paths: "/Users/German/Desktop/Project/Algorithms/Emotion-Multiclass-CNN/cnn-embeddings/trained_model_1533645440/checkpoints/model-1000"
+all_model_checkpoint_paths: "/Users/German/Desktop/Project/Algorithms/Emotion-Multiclass-CNN/cnn-embeddings/trained_model_1533645440/checkpoints/model-1500"
+all_model_checkpoint_paths: "/Users/German/Desktop/Project/Algorithms/Emotion-Multiclass-CNN/cnn-embeddings/trained_model_1533645440best_model.ckpt"
