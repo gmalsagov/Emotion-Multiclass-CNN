@@ -1,0 +1,274 @@
+---------------------------------------------------------------------------------------------------------------------------------------------
+0: op name = import/input_x, op type = ( Placeholder ), inputs = , outputs = import/input_x:0
+@input shapes:
+@output shapes:
+name = import/input_x:0 : (?, 179)
+---------------------------------------------------------------------------------------------------------------------------------------------
+1: op name = import/embedding/W, op type = ( Const ), inputs = , outputs = import/embedding/W:0
+@input shapes:
+@output shapes:
+name = import/embedding/W:0 : (9000, 200)
+---------------------------------------------------------------------------------------------------------------------------------------------
+2: op name = import/embedding/W/read, op type = ( Identity ), inputs = import/embedding/W:0, outputs = import/embedding/W/read:0
+@input shapes:
+name = import/embedding/W:0 : (9000, 200)
+@output shapes:
+name = import/embedding/W/read:0 : (9000, 200)
+---------------------------------------------------------------------------------------------------------------------------------------------
+3: op name = import/embedding/embedding_lookup/axis, op type = ( Const ), inputs = , outputs = import/embedding/embedding_lookup/axis:0
+@input shapes:
+@output shapes:
+name = import/embedding/embedding_lookup/axis:0 : ()
+---------------------------------------------------------------------------------------------------------------------------------------------
+4: op name = import/embedding/embedding_lookup, op type = ( GatherV2 ), inputs = import/embedding/W/read:0, import/input_x:0, import/embedding/embedding_lookup/axis:0, outputs = import/embedding/embedding_lookup:0
+@input shapes:
+name = import/embedding/W/read:0 : (9000, 200)
+name = import/input_x:0 : (?, 179)
+name = import/embedding/embedding_lookup/axis:0 : ()
+@output shapes:
+name = import/embedding/embedding_lookup:0 : (?, 179, 200)
+---------------------------------------------------------------------------------------------------------------------------------------------
+5: op name = import/embedding/ExpandDims/dim, op type = ( Const ), inputs = , outputs = import/embedding/ExpandDims/dim:0
+@input shapes:
+@output shapes:
+name = import/embedding/ExpandDims/dim:0 : ()
+---------------------------------------------------------------------------------------------------------------------------------------------
+6: op name = import/embedding/ExpandDims, op type = ( ExpandDims ), inputs = import/embedding/embedding_lookup:0, import/embedding/ExpandDims/dim:0, outputs = import/embedding/ExpandDims:0
+@input shapes:
+name = import/embedding/embedding_lookup:0 : (?, 179, 200)
+name = import/embedding/ExpandDims/dim:0 : ()
+@output shapes:
+name = import/embedding/ExpandDims:0 : (?, 179, 200, 1)
+---------------------------------------------------------------------------------------------------------------------------------------------
+7: op name = import/conv-maxpool-3/W, op type = ( Const ), inputs = , outputs = import/conv-maxpool-3/W:0
+@input shapes:
+@output shapes:
+name = import/conv-maxpool-3/W:0 : (3, 200, 1, 32)
+---------------------------------------------------------------------------------------------------------------------------------------------
+8: op name = import/conv-maxpool-3/W/read, op type = ( Identity ), inputs = import/conv-maxpool-3/W:0, outputs = import/conv-maxpool-3/W/read:0
+@input shapes:
+name = import/conv-maxpool-3/W:0 : (3, 200, 1, 32)
+@output shapes:
+name = import/conv-maxpool-3/W/read:0 : (3, 200, 1, 32)
+---------------------------------------------------------------------------------------------------------------------------------------------
+9: op name = import/conv-maxpool-3/conv, op type = ( Conv2D ), inputs = import/embedding/ExpandDims:0, import/conv-maxpool-3/W/read:0, outputs = import/conv-maxpool-3/conv:0
+@input shapes:
+name = import/embedding/ExpandDims:0 : (?, 179, 200, 1)
+name = import/conv-maxpool-3/W/read:0 : (3, 200, 1, 32)
+@output shapes:
+name = import/conv-maxpool-3/conv:0 : (?, 177, 1, 32)
+---------------------------------------------------------------------------------------------------------------------------------------------
+10: op name = import/conv-maxpool-3/b, op type = ( Const ), inputs = , outputs = import/conv-maxpool-3/b:0
+@input shapes:
+@output shapes:
+name = import/conv-maxpool-3/b:0 : (32,)
+---------------------------------------------------------------------------------------------------------------------------------------------
+11: op name = import/conv-maxpool-3/b/read, op type = ( Identity ), inputs = import/conv-maxpool-3/b:0, outputs = import/conv-maxpool-3/b/read:0
+@input shapes:
+name = import/conv-maxpool-3/b:0 : (32,)
+@output shapes:
+name = import/conv-maxpool-3/b/read:0 : (32,)
+---------------------------------------------------------------------------------------------------------------------------------------------
+12: op name = import/conv-maxpool-3/BiasAdd, op type = ( BiasAdd ), inputs = import/conv-maxpool-3/conv:0, import/conv-maxpool-3/b/read:0, outputs = import/conv-maxpool-3/BiasAdd:0
+@input shapes:
+name = import/conv-maxpool-3/conv:0 : (?, 177, 1, 32)
+name = import/conv-maxpool-3/b/read:0 : (32,)
+@output shapes:
+name = import/conv-maxpool-3/BiasAdd:0 : (?, 177, 1, 32)
+---------------------------------------------------------------------------------------------------------------------------------------------
+13: op name = import/conv-maxpool-3/relu, op type = ( Relu ), inputs = import/conv-maxpool-3/BiasAdd:0, outputs = import/conv-maxpool-3/relu:0
+@input shapes:
+name = import/conv-maxpool-3/BiasAdd:0 : (?, 177, 1, 32)
+@output shapes:
+name = import/conv-maxpool-3/relu:0 : (?, 177, 1, 32)
+---------------------------------------------------------------------------------------------------------------------------------------------
+14: op name = import/conv-maxpool-3/pool, op type = ( MaxPool ), inputs = import/conv-maxpool-3/relu:0, outputs = import/conv-maxpool-3/pool:0
+@input shapes:
+name = import/conv-maxpool-3/relu:0 : (?, 177, 1, 32)
+@output shapes:
+name = import/conv-maxpool-3/pool:0 : (?, 1, 1, 32)
+---------------------------------------------------------------------------------------------------------------------------------------------
+15: op name = import/conv-maxpool-4/W, op type = ( Const ), inputs = , outputs = import/conv-maxpool-4/W:0
+@input shapes:
+@output shapes:
+name = import/conv-maxpool-4/W:0 : (4, 200, 1, 32)
+---------------------------------------------------------------------------------------------------------------------------------------------
+16: op name = import/conv-maxpool-4/W/read, op type = ( Identity ), inputs = import/conv-maxpool-4/W:0, outputs = import/conv-maxpool-4/W/read:0
+@input shapes:
+name = import/conv-maxpool-4/W:0 : (4, 200, 1, 32)
+@output shapes:
+name = import/conv-maxpool-4/W/read:0 : (4, 200, 1, 32)
+---------------------------------------------------------------------------------------------------------------------------------------------
+17: op name = import/conv-maxpool-4/conv, op type = ( Conv2D ), inputs = import/embedding/ExpandDims:0, import/conv-maxpool-4/W/read:0, outputs = import/conv-maxpool-4/conv:0
+@input shapes:
+name = import/embedding/ExpandDims:0 : (?, 179, 200, 1)
+name = import/conv-maxpool-4/W/read:0 : (4, 200, 1, 32)
+@output shapes:
+name = import/conv-maxpool-4/conv:0 : (?, 176, 1, 32)
+---------------------------------------------------------------------------------------------------------------------------------------------
+18: op name = import/conv-maxpool-4/b, op type = ( Const ), inputs = , outputs = import/conv-maxpool-4/b:0
+@input shapes:
+@output shapes:
+name = import/conv-maxpool-4/b:0 : (32,)
+---------------------------------------------------------------------------------------------------------------------------------------------
+19: op name = import/conv-maxpool-4/b/read, op type = ( Identity ), inputs = import/conv-maxpool-4/b:0, outputs = import/conv-maxpool-4/b/read:0
+@input shapes:
+name = import/conv-maxpool-4/b:0 : (32,)
+@output shapes:
+name = import/conv-maxpool-4/b/read:0 : (32,)
+---------------------------------------------------------------------------------------------------------------------------------------------
+20: op name = import/conv-maxpool-4/BiasAdd, op type = ( BiasAdd ), inputs = import/conv-maxpool-4/conv:0, import/conv-maxpool-4/b/read:0, outputs = import/conv-maxpool-4/BiasAdd:0
+@input shapes:
+name = import/conv-maxpool-4/conv:0 : (?, 176, 1, 32)
+name = import/conv-maxpool-4/b/read:0 : (32,)
+@output shapes:
+name = import/conv-maxpool-4/BiasAdd:0 : (?, 176, 1, 32)
+---------------------------------------------------------------------------------------------------------------------------------------------
+21: op name = import/conv-maxpool-4/relu, op type = ( Relu ), inputs = import/conv-maxpool-4/BiasAdd:0, outputs = import/conv-maxpool-4/relu:0
+@input shapes:
+name = import/conv-maxpool-4/BiasAdd:0 : (?, 176, 1, 32)
+@output shapes:
+name = import/conv-maxpool-4/relu:0 : (?, 176, 1, 32)
+---------------------------------------------------------------------------------------------------------------------------------------------
+22: op name = import/conv-maxpool-4/pool, op type = ( MaxPool ), inputs = import/conv-maxpool-4/relu:0, outputs = import/conv-maxpool-4/pool:0
+@input shapes:
+name = import/conv-maxpool-4/relu:0 : (?, 176, 1, 32)
+@output shapes:
+name = import/conv-maxpool-4/pool:0 : (?, 1, 1, 32)
+---------------------------------------------------------------------------------------------------------------------------------------------
+23: op name = import/conv-maxpool-5/W, op type = ( Const ), inputs = , outputs = import/conv-maxpool-5/W:0
+@input shapes:
+@output shapes:
+name = import/conv-maxpool-5/W:0 : (5, 200, 1, 32)
+---------------------------------------------------------------------------------------------------------------------------------------------
+24: op name = import/conv-maxpool-5/W/read, op type = ( Identity ), inputs = import/conv-maxpool-5/W:0, outputs = import/conv-maxpool-5/W/read:0
+@input shapes:
+name = import/conv-maxpool-5/W:0 : (5, 200, 1, 32)
+@output shapes:
+name = import/conv-maxpool-5/W/read:0 : (5, 200, 1, 32)
+---------------------------------------------------------------------------------------------------------------------------------------------
+25: op name = import/conv-maxpool-5/conv, op type = ( Conv2D ), inputs = import/embedding/ExpandDims:0, import/conv-maxpool-5/W/read:0, outputs = import/conv-maxpool-5/conv:0
+@input shapes:
+name = import/embedding/ExpandDims:0 : (?, 179, 200, 1)
+name = import/conv-maxpool-5/W/read:0 : (5, 200, 1, 32)
+@output shapes:
+name = import/conv-maxpool-5/conv:0 : (?, 175, 1, 32)
+---------------------------------------------------------------------------------------------------------------------------------------------
+26: op name = import/conv-maxpool-5/b, op type = ( Const ), inputs = , outputs = import/conv-maxpool-5/b:0
+@input shapes:
+@output shapes:
+name = import/conv-maxpool-5/b:0 : (32,)
+---------------------------------------------------------------------------------------------------------------------------------------------
+27: op name = import/conv-maxpool-5/b/read, op type = ( Identity ), inputs = import/conv-maxpool-5/b:0, outputs = import/conv-maxpool-5/b/read:0
+@input shapes:
+name = import/conv-maxpool-5/b:0 : (32,)
+@output shapes:
+name = import/conv-maxpool-5/b/read:0 : (32,)
+---------------------------------------------------------------------------------------------------------------------------------------------
+28: op name = import/conv-maxpool-5/BiasAdd, op type = ( BiasAdd ), inputs = import/conv-maxpool-5/conv:0, import/conv-maxpool-5/b/read:0, outputs = import/conv-maxpool-5/BiasAdd:0
+@input shapes:
+name = import/conv-maxpool-5/conv:0 : (?, 175, 1, 32)
+name = import/conv-maxpool-5/b/read:0 : (32,)
+@output shapes:
+name = import/conv-maxpool-5/BiasAdd:0 : (?, 175, 1, 32)
+---------------------------------------------------------------------------------------------------------------------------------------------
+29: op name = import/conv-maxpool-5/relu, op type = ( Relu ), inputs = import/conv-maxpool-5/BiasAdd:0, outputs = import/conv-maxpool-5/relu:0
+@input shapes:
+name = import/conv-maxpool-5/BiasAdd:0 : (?, 175, 1, 32)
+@output shapes:
+name = import/conv-maxpool-5/relu:0 : (?, 175, 1, 32)
+---------------------------------------------------------------------------------------------------------------------------------------------
+30: op name = import/conv-maxpool-5/pool, op type = ( MaxPool ), inputs = import/conv-maxpool-5/relu:0, outputs = import/conv-maxpool-5/pool:0
+@input shapes:
+name = import/conv-maxpool-5/relu:0 : (?, 175, 1, 32)
+@output shapes:
+name = import/conv-maxpool-5/pool:0 : (?, 1, 1, 32)
+---------------------------------------------------------------------------------------------------------------------------------------------
+31: op name = import/concat/axis, op type = ( Const ), inputs = , outputs = import/concat/axis:0
+@input shapes:
+@output shapes:
+name = import/concat/axis:0 : ()
+---------------------------------------------------------------------------------------------------------------------------------------------
+32: op name = import/concat, op type = ( ConcatV2 ), inputs = import/conv-maxpool-3/pool:0, import/conv-maxpool-4/pool:0, import/conv-maxpool-5/pool:0, import/concat/axis:0, outputs = import/concat:0
+@input shapes:
+name = import/conv-maxpool-3/pool:0 : (?, 1, 1, 32)
+name = import/conv-maxpool-4/pool:0 : (?, 1, 1, 32)
+name = import/conv-maxpool-5/pool:0 : (?, 1, 1, 32)
+name = import/concat/axis:0 : ()
+@output shapes:
+name = import/concat:0 : (?, 1, 1, 96)
+---------------------------------------------------------------------------------------------------------------------------------------------
+33: op name = import/Reshape/shape, op type = ( Const ), inputs = , outputs = import/Reshape/shape:0
+@input shapes:
+@output shapes:
+name = import/Reshape/shape:0 : (2,)
+---------------------------------------------------------------------------------------------------------------------------------------------
+34: op name = import/Reshape, op type = ( Reshape ), inputs = import/concat:0, import/Reshape/shape:0, outputs = import/Reshape:0
+@input shapes:
+name = import/concat:0 : (?, 1, 1, 96)
+name = import/Reshape/shape:0 : (2,)
+@output shapes:
+name = import/Reshape:0 : (?, 96)
+---------------------------------------------------------------------------------------------------------------------------------------------
+35: op name = import/W, op type = ( Const ), inputs = , outputs = import/W:0
+@input shapes:
+@output shapes:
+name = import/W:0 : (96, 7)
+---------------------------------------------------------------------------------------------------------------------------------------------
+36: op name = import/W/read, op type = ( Identity ), inputs = import/W:0, outputs = import/W/read:0
+@input shapes:
+name = import/W:0 : (96, 7)
+@output shapes:
+name = import/W/read:0 : (96, 7)
+---------------------------------------------------------------------------------------------------------------------------------------------
+37: op name = import/output/scores/MatMul, op type = ( MatMul ), inputs = import/Reshape:0, import/W/read:0, outputs = import/output/scores/MatMul:0
+@input shapes:
+name = import/Reshape:0 : (?, 96)
+name = import/W/read:0 : (96, 7)
+@output shapes:
+name = import/output/scores/MatMul:0 : (?, 7)
+---------------------------------------------------------------------------------------------------------------------------------------------
+38: op name = import/output/b, op type = ( Const ), inputs = , outputs = import/output/b:0
+@input shapes:
+@output shapes:
+name = import/output/b:0 : (7,)
+---------------------------------------------------------------------------------------------------------------------------------------------
+39: op name = import/output/b/read, op type = ( Identity ), inputs = import/output/b:0, outputs = import/output/b/read:0
+@input shapes:
+name = import/output/b:0 : (7,)
+@output shapes:
+name = import/output/b/read:0 : (7,)
+---------------------------------------------------------------------------------------------------------------------------------------------
+40: op name = import/output/scores, op type = ( BiasAdd ), inputs = import/output/scores/MatMul:0, import/output/b/read:0, outputs = import/output/scores:0
+@input shapes:
+name = import/output/scores/MatMul:0 : (?, 7)
+name = import/output/b/read:0 : (7,)
+@output shapes:
+name = import/output/scores:0 : (?, 7)
+---------------------------------------------------------------------------------------------------------------------------------------------
+41: op name = import/output/predictions/dimension, op type = ( Const ), inputs = , outputs = import/output/predictions/dimension:0
+@input shapes:
+@output shapes:
+name = import/output/predictions/dimension:0 : ()
+---------------------------------------------------------------------------------------------------------------------------------------------
+42: op name = import/output/predictions, op type = ( ArgMax ), inputs = import/output/scores:0, import/output/predictions/dimension:0, outputs = import/output/predictions:0
+@input shapes:
+name = import/output/scores:0 : (?, 7)
+name = import/output/predictions/dimension:0 : ()
+@output shapes:
+name = import/output/predictions:0 : (?,)
+---------------------------------------------------------------------------------------------------------------------------------------------
+OPS counts:
+ConcatV2 : 1
+ExpandDims : 1
+ArgMax : 1
+GatherV2 : 1
+MatMul : 1
+Reshape : 1
+Placeholder : 1
+MaxPool : 3
+Relu : 3
+Conv2D : 3
+BiasAdd : 4
+Identity : 9
+Const : 14

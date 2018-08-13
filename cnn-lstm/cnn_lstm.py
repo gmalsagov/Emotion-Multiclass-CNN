@@ -1,9 +1,15 @@
 import tensorflow as tf
 import numpy as np
 
+
+def f1(cell, dropout_keep_prob): return tf.contrib.rnn.DropoutWrapper(cell, output_keep_prob=dropout_keep_prob)
+
+
+def f2(cell): return cell
+
 class TextCNNLSTM(object):
     def __init__(self, sequence_length, num_classes, vocab_size, embedding_size, filter_sizes, num_filters,
-                 embedding_mat, l2_reg_lambda, max_pool_size, hidden_unit):
+                 l2_reg_lambda, max_pool_size, hidden_unit):
         # Placeholders for input, output and dropout
         # print sequence_length
         self.input_x = tf.placeholder(tf.int32, [None, sequence_length], name='input_x')
@@ -12,6 +18,7 @@ class TextCNNLSTM(object):
         self.batch_size = tf.placeholder(tf.int32, [])
         self.pad = tf.placeholder(tf.float32, [None, 1, embedding_size, 1], name='pad')
         self.real_len = tf.placeholder(tf.int32, [None], name='real_len')
+        self.is_training = tf.placeholder(dtype=tf.bool, name='is_training')
 
         # Keeping track of l2 regularization loss (optional)
         l2_loss = tf.constant(0.0)
@@ -24,8 +31,9 @@ class TextCNNLSTM(object):
             self.embedded_chars_expanded = tf.expand_dims(self.embedded_chars, -1)
 
         # Create a convolution + maxpool layer for each filter size
-        pooled_outputs = []
-        reduced = np.int32(np.ceil((sequence_length - 4) * 1.0 / max_pool_size))
+        conv_outputs = []
+        reduced = np.int32(np.ceil(sequence_length * 1.0 / max_pool_size))
+        print(reduced)
 
         for i, filter_size in enumerate(filter_sizes):
             with tf.name_scope('conv-maxpool-%s' % filter_size):
@@ -52,6 +60,7 @@ class TextCNNLSTM(object):
                 # h = tf.nn.tanh(tf.nn.bias_add(conv, b), name = 'tanh')
                 h = tf.nn.relu(tf.nn.bias_add(conv, b), name='relu')
 
+                """
                 # Maxpooling over the outputs
                 pooled = tf.nn.max_pool(
                     h,
@@ -59,26 +68,36 @@ class TextCNNLSTM(object):
                     strides=[1, max_pool_size, 1, 1],
                     padding='VALID',
                     name='pool')
+                """
+                h = tf.reshape(h, [-1, sequence_length, num_filters])
+                # out = tf.reduce_max(h, 2)  # [-1, L, d]
+                conv_outputs.append(h)
 
-                pooled = tf.reshape(pooled, [-1, reduced, num_filters])
-                pooled_outputs.append(pooled)
+        conv_outputs = tf.concat(conv_outputs, 2)
 
-        pooled_outputs = tf.concat(pooled_outputs, 2)
-        pooled_outputs = tf.nn.dropout(pooled_outputs, self.dropout_keep_prob)
+        # pooled_outputs = tf.nn.dropout(pooled_outputs, self.dropout_keep_prob)
 
         lstm_cell = tf.contrib.rnn.GRUCell(num_units=hidden_unit)
 
+        # def f1(cell, dropout_keep_prob): return tf.contrib.rnn.DropoutWrapper(cell, output_keep_prob=dropout_keep_prob)
+        #
+        # def f2(cell): return cell
+        #
+        # if self.is_training:
         lstm_cell = tf.contrib.rnn.DropoutWrapper(lstm_cell, output_keep_prob=self.dropout_keep_prob)
+        # lstm_cell = tf.cond(self.is_training, lambda: f1(lstm_cell, self.dropout_keep_prob), lambda: f2(lstm_cell))
+        # print('hello')
 
         self._initial_state = lstm_cell.zero_state(self.batch_size, tf.float32)
 
         inputs = [tf.squeeze(input_, [1]) for input_ in
-                  tf.split(pooled_outputs, num_or_size_splits=int(reduced), axis=1)]
+                  tf.split(conv_outputs, num_or_size_splits=int(sequence_length), axis=1)]
 
         outputs, state = tf.contrib.rnn.static_rnn(lstm_cell, inputs, initial_state=self._initial_state,
                                                    sequence_length=self.real_len)
 
         output = outputs[0]
+
         with tf.variable_scope('Output'):
             tf.get_variable_scope().reuse_variables()
             one = tf.ones([1, hidden_unit], tf.float32)

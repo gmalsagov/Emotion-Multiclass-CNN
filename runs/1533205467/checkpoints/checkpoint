@@ -1,6 +1,0 @@
-model_checkpoint_path: "/Users/German/Desktop/Project/Algorithms/Emotion-Multiclass-CNN-RNN/runs/1533205467/checkpoints/model-2900"
-all_model_checkpoint_paths: "/Users/German/Desktop/Project/Algorithms/Emotion-Multiclass-CNN-RNN/runs/1533205467/checkpoints/model-2500"
-all_model_checkpoint_paths: "/Users/German/Desktop/Project/Algorithms/Emotion-Multiclass-CNN-RNN/runs/1533205467/checkpoints/model-2600"
-all_model_checkpoint_paths: "/Users/German/Desktop/Project/Algorithms/Emotion-Multiclass-CNN-RNN/runs/1533205467/checkpoints/model-2700"
-all_model_checkpoint_paths: "/Users/German/Desktop/Project/Algorithms/Emotion-Multiclass-CNN-RNN/runs/1533205467/checkpoints/model-2800"
-all_model_checkpoint_paths: "/Users/German/Desktop/Project/Algorithms/Emotion-Multiclass-CNN-RNN/runs/1533205467/checkpoints/model-2900"

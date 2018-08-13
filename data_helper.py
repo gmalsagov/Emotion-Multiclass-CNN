@@ -1,5 +1,6 @@
 import csv
 import random
+import string
 
 import os
 import re
@@ -11,10 +12,98 @@ import pandas as pd
 import gensim as gs
 from pprint import pprint
 from collections import Counter
-from tensorflow.contrib import learn
+import nltk
+nltk.data.path.append('/Users/German/tensorflow/venv/lib/nltk_data')
+from nltk.corpus import stopwords
+from nltk.stem import SnowballStemmer
+from string import punctuation
+from keras.preprocessing.text import Tokenizer
+
 
 logging.getLogger().setLevel(logging.INFO)
 
+MAX_NB_WORDS = 20000
+MAX_SEQUENCE_LENGTH = 100
+
+def clean_text(text, remove_stopwords=False, stem_words=False):
+
+    # Remove puncuation
+    text = text.translate(None, punctuation)
+
+    # Convert words to lower case and split them
+    text = text.lower().split()
+
+    # Remove stop words
+    if remove_stopwords:
+        stops = set(stopwords.words("english"))
+        text = [w for w in text if not w in stops and len(w) >= 3]
+
+    text = " ".join(text)
+
+    # Clean the text
+    text = re.sub(r"[^A-Za-z0-9^,!.\/'+-=]", " ", text)
+    text = re.sub(r"what's", "what is ", text)
+    text = re.sub(r"\'s", " ", text)
+    text = re.sub(r"\'ve", " have ", text)
+    text = re.sub(r"n't", " not ", text)
+    text = re.sub(r"i'm", "i am ", text)
+    text = re.sub(r"\'re", " are ", text)
+    text = re.sub(r"\'d", " would ", text)
+    text = re.sub(r"\'ll", " will ", text)
+    text = re.sub(r",", " ", text)
+    text = re.sub(r"\.", " ", text)
+    text = re.sub(r"!", " ! ", text)
+    text = re.sub(r"\/", " ", text)
+    text = re.sub(r"\^", " ^ ", text)
+    text = re.sub(r"\+", " + ", text)
+    text = re.sub(r"\-", " - ", text)
+    text = re.sub(r"\=", " = ", text)
+    text = re.sub(r"'", " ", text)
+    text = re.sub(r"(\d+)(k)", r"\g<1>000", text)
+    text = re.sub(r":", " : ", text)
+    text = re.sub(r" e g ", " eg ", text)
+    text = re.sub(r" b g ", " bg ", text)
+    text = re.sub(r" u s ", " american ", text)
+    text = re.sub(r"\0s", "0", text)
+    text = re.sub(r" 9 11 ", "911", text)
+    text = re.sub(r"e - mail", "email", text)
+    text = re.sub(r"j k", "jk", text)
+    text = re.sub(r"\s{2,}", " ", text)
+
+    text = strip_links(text)
+    text = strip_all_entities(text)
+
+    # Stemming
+    if stem_words:
+        text = text.split()
+        stemmer = SnowballStemmer('english')
+        stemmed_words = [stemmer.stem(word) for word in text]
+        text = " ".join(stemmed_words)
+
+    return text
+
+
+# Removing URL's
+def strip_links(text):
+    link_regex    = re.compile('((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)', re.DOTALL)
+    links         = re.findall(link_regex, text)
+    for link in links:
+        text = text.replace(link[0], ', ')
+    return text
+
+# Removing Tags and Hashtags
+def strip_all_entities(text):
+    entity_prefixes = ['@','#']
+    for separator in  string.punctuation:
+        if separator not in entity_prefixes :
+            text = text.replace(separator,' ')
+    words = []
+    for word in text.split():
+        word = word.strip()
+        if word:
+            if word[0] not in entity_prefixes:
+                words.append(word)
+    return ' '.join(words)
 
 def clean_str(s):
     s = re.sub(r"[^A-Za-z0-9:(),!?\'\`]", " ", s)
@@ -33,9 +122,10 @@ def clean_str(s):
     s = re.sub(r"\s{2,}", " ", s)
     return s.strip().lower()
 
+
 def gloveVec(filename):
     embeddings = {}
-    with open(os.path(filename), 'r') as data:
+    with open(filename, 'r') as data:
         # f = data.read().encode("utf-8")
         i = 0
         for line in data:
@@ -49,10 +139,10 @@ def gloveVec(filename):
     data.close()
     return embeddings
 
+
 def load_embedding_vectors_word2vec(vocabulary, filename, vector_size):
     # load embedding_vectors from the word2vec
-    # filename = '../GoogleNews-vectors-negative300.bin'
-    # filename = '../embeddings/glove.twitter.27B/glove.twitter.27B.200d.txt'
+
     encoding = 'utf-8'
     with open(filename, "rb") as f:
         header = f.readline()
@@ -96,10 +186,11 @@ def load_embedding_vectors_glove(vocabulary, filename, vector_size):
     f.close()
     return embedding_vectors
 
-def load_embeddings(vocabulary):
+
+def load_embeddings(vocabulary, dimension):
     word_embeddings = {}
     for word in vocabulary:
-        word_embeddings[word] = np.random.uniform(-0.25, 0.25, 300)
+        word_embeddings[word] = np.random.uniform(-0.25, 0.25, dimension)
     return word_embeddings
 
 
@@ -200,17 +291,35 @@ def load(filename):
     np.fill_diagonal(one_hot, 1)
     label_dict = dict(zip(labels, one_hot))
 
-    x_raw = df[selected[1]].apply(lambda x: clean_str(x)).tolist()
+    x_clean = df[selected[1]].apply(lambda x: clean_text(x, True, False)).tolist()
     y_raw = df[selected[0]].apply(lambda y: label_dict[y]).tolist()
 
-    # x_raw = pad_sentences(x_raw)
-    vocabulary, vocabulary_inv = build_vocab(x_raw)
+    # x_pad = pad_sentences(x_clean)
+    vocabulary, vocabulary_inv = build_vocab(x_clean)
 
-    x = np.array([[vocabulary[word] for word in sentence] for sentence in x_raw])
+    # x = np.array([[vocabulary[word] for word in sentence] for sentence in x_pad])
     y = np.array(y_raw)
 
-    return x_raw, y
+    return x_clean, y, vocabulary, df
 
+
+def load4(path):
+
+    tweets = []
+    affect = []
+
+    os.chdir(path)
+
+    for filename in os.listdir(path):
+
+        f = open(filename, 'r')
+        lines = f.readlines()[1:]
+        for x in lines:
+            tweets.append(x.split('\t')[1])
+            affect.append(x.split('\t')[2])
+        f.close()
+
+    return tweets, affect
 
 def split_train_test_data(filename):
 
@@ -228,27 +337,13 @@ def split_train_test_data(filename):
     sentences = df[selected[1]].apply(lambda x: clean_str(x)).tolist()
     labels = df[selected[0]].tolist()
 
-    # sentences = []
-    # labels = []
-
-    # with open(filename) as csvfile:
-    #     reader = csv.reader(csvfile, delimiter=',')
-    #     reader.next() # skip header line
-    #     for row in reader:
-    #         print(row[1])
-    #         # sentences.append(row[1])
-    #         # labels.append(row[0])
-    #
-    # print(sentences[0])
-    # print(labels[0])
-
     joy = []
-    fear= []
-    anger= []
-    sadness= []
-    disgust= []
-    shame= []
-    guilt= []
+    fear = []
+    anger = []
+    sadness = []
+    disgust = []
+    shame = []
+    guilt = []
 
     for i, e in enumerate(labels):
         if e == classes[0]:
@@ -345,15 +440,6 @@ def split_train_test_data(filename):
         test_labels.append('shame')
     for x in guilt:
         test_labels.append('guilt')
-
-    # print(train_sentences[0])
-    # print(test_sentences[0])
-    # print(train_labels[0])
-    # print(test_labels[0])
-    # print(len(train_sentences))
-    # print(len(test_sentences))
-    # print(len(train_labels))
-    # print(len(test_labels))
 
     with open('./data/isear_train.csv', 'wb') as f:
         writer = csv.writer(f)
@@ -487,3 +573,4 @@ if __name__ == "__main__":
 
     split_train_test_data('./data/iseardataset.csv')
     # load_data('./data/isear_train.csv')
+    # load4('./data/SemEval-2017/train/EI-reg-En-anger-train.txt')

@@ -12,7 +12,7 @@ def create_graph(model_dir):
 
     with tf.Graph().as_default():
 
-        global_step = tf.Variable(0,name='global_step', trainable=False)
+        # global_step = tf.Variable(0,name='global_step', trainable=False)
         init_op = tf.global_variables_initializer()
 
         session_conf = tf.ConfigProto(allow_soft_placement=True, log_device_placement=False)
@@ -52,7 +52,7 @@ def freeze_graph(model_dir):
 
     # We precise the file fullname of our freezed graph
     absolute_model_dir = "/".join(input_checkpoint.split('/')[:-1])
-    output_graph = absolute_model_dir + "/graph.pbtxt"
+    # output_graph = absolute_model_dir + "/graph.pbtxt"
 
     output_node_names = 'output/predictions'
 
@@ -73,7 +73,7 @@ def freeze_graph(model_dir):
             tf.get_default_graph().as_graph_def(),  # The graph_def is used to retrieve the nodes
             output_node_names.split(",")  # The output node names are used to select the useful nodes
         )
-        with tf.gfile.FastGFile('./frozen_embeddings.pb', 'wb') as f:
+        with tf.gfile.FastGFile('./cnn-embeddings/trained_model_1534172737/checkpoints/frozen_model.pb', 'wb') as f:
             f.write(output_graph_def.SerializeToString())
 
         # Finally we serialize and dump the output graph to the filesystem
@@ -94,6 +94,6 @@ def freeze_graph(model_dir):
 
     # freeze_graph(args.model_dir, args.output_node_names)
 
-# create_graph('cnn-embeddings/64%_trained_model_1533293830/checkpoints')
-
-freeze_graph('cnn-embeddings/trained_model_1533645440/checkpoints')
+# create_graph('cnn-embeddings/64%_trained_model/checkpoints')
+#
+freeze_graph('cnn-embeddings/trained_model_1534172737/checkpoints')
