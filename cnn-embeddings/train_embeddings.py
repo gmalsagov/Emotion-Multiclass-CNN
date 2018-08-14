@@ -19,6 +19,31 @@ logging.getLogger().setLevel(logging.INFO)
 
 
 def train_cnn():
+    """This function does training, validation and testing on unseen data
+     of the Convolutional Neural Network with three layers using provided train and test
+
+     Inputs:
+     -- Train dataset with sentences and labels
+     -- Test dataset with sentences
+     -- Json File containing following parameters:
+            -batch size
+            -dropout probability
+            -embedding dimensions
+            -evaluate_every
+            -filter_sizes
+            -max_pool_size
+            -num_epochs
+            -num_filters
+
+     Outputs:
+     -- Training and Testing Accuracies
+     -- Confusion Matrix on predictions
+     -- Classification Report
+
+     Examples:
+    """
+
+
     """Step 1: load test and train data and training parameters"""
 
     # Relative path to datasets
@@ -39,11 +64,11 @@ def train_cnn():
     # Load test data
     x_test, y_test, vocabulary1, df1 = data_helper.load(test_set)
 
-    # Load parameters
+    # Load parameters from a file
     parameter_file = '../training_config.json'
     params = json.loads(open(parameter_file).read())
 
-    """Step 2: padding each sentence to the same length and mapping each word to an id"""
+    """Step 2: Padding each sentence to the same length and mapping each word to an id"""
     max_document_length = max([len(x.split(' ')) for x in x_raw])
     max_document_length2 = max([len(x.split(' ')) for x in x_test])
     if max_document_length2 > max_document_length:
@@ -55,20 +80,22 @@ def train_cnn():
     y = np.array(y_raw)
     x_test = np.array(list(vocab_processor.fit_transform(x_test)))
 
-    """Step 3: shuffle and split the train set into train and dev sets"""
+    """Step 3: Shuffle and split the train set into train and dev sets"""
     shuffle_indices = np.random.permutation(np.arange(len(y_raw)))
     x_shuffled = x[shuffle_indices]
     y_shuffled = y[shuffle_indices]
     x_train, x_dev, y_train, y_dev = train_test_split(x_shuffled, y_shuffled, test_size=0.1)
 
-    """Step 4: save the labels into labels.json for prediction later"""
+    """Step 4: Save the labels into labels.json for prediction later"""
     with open('./labels.json', 'w') as outfile:
         json.dump(classes, outfile, indent=4)
 
-    logging.info('x_train: {}, x_dev: {}, x_test: {}'.format(len(x_train), len(x_dev), len(x_test)))
-    logging.info('y_train: {}, y_dev: {}, y_test: {}'.format(len(y_train), len(y_dev), len(y_test)))
+    print('x_train: {}, x_dev: {}, x_test: {}'.format(len(x_train), len(x_dev), len(x_test)))
+    print('y_train: {}, y_dev: {}, y_test: {}'.format(len(y_train), len(y_dev), len(y_test)))
 
     """Step 5: build a graph and instantiate cnn class"""
+
+    # Creating TensorFlow session
     graph = tf.Graph()
     with graph.as_default():
         session_conf = tf.ConfigProto(allow_soft_placement=True, log_device_placement=False)
@@ -140,9 +167,12 @@ def train_cnn():
                 # Specify inputs and outputs of the training step
                 _, step, summaries, loss, acc = sess.run(
                     [train_op, global_step, train_summary_op, cnn.loss, cnn.accuracy], feed_dict)
+
+                # Initialise current time object to keep track of time
                 time_str = datetime.datetime.now().isoformat()
                 print("{}: step {} / {}, loss {:g}, acc {:g}".format(time_str, step, total_steps, loss, acc))
                 train_summary_writer.add_summary(summaries, step)
+                return loss, acc
 
             # Validation step: evaluate the model with one dev batch
             def dev_step(x_batch, y_batch, writer=None):
@@ -160,17 +190,20 @@ def train_cnn():
                     writer.add_summary(summaries, step)
                 return num_correct, predictions
 
+            # Initialise global variables
             sess.run(tf.global_variables_initializer())
 
             print "Loading Embeddings..."
 
             # Specify path and dimensions of word embeddings
-            embedding_dimension = 300
             # embedding_dir = '../embeddings/glove.twitter.27B/glove.twitter.27B.200d.txt'
             embedding_dir = '../GoogleNews-vectors-negative300.bin'
             # embedding_dir = '../embeddings/glove.6B/glove.6B.300d.txt'
 
-            # Load word embeddings
+            embedding_dimension = 300
+
+
+            # Load pre-trained word embeddings
             # embeddings = data_helper.load_embedding_vectors_glove(vocabulary, embedding_dir, embedding_dimension)
             embeddings = data_helper.load_embedding_vectors_word2vec(vocab_processor.vocabulary_,
                                                                 embedding_dir, embedding_dimension)
@@ -185,6 +218,9 @@ def train_cnn():
                                                    params['num_epochs'])
             best_accuracy, best_at_step = 0, 0
 
+            total_loss, total_acc = 0, 0
+
+            # Initialise parameters
             batch_size = params['batch_size']
             num_epochs = params['num_epochs']
             total_steps = int((len(x_train)/batch_size + 1) * num_epochs)
@@ -193,12 +229,21 @@ def train_cnn():
             for train_batch in train_batches:
                 if len(train_batch) == 0:
                     continue
+                # Zip x and y lists into single list
                 x_train_batch, y_train_batch = zip(*train_batch)
-                train_step(x_train_batch, y_train_batch, total_steps)
+
+                # Feed inputs into training function
+                loss, acc = train_step(x_train_batch, y_train_batch, total_steps)
+
+                # Sum up total loss and accuracy
+                total_loss += loss
+                total_acc += acc
+
                 current_step = tf.train.global_step(sess, global_step)
 
                 """Step 6.1: evaluate the model with x_dev and y_dev (batch by batch)"""
                 if current_step % params['evaluate_every'] == 0:
+                    print("Average per step: loss {:g}, acc {:g}".format(total_loss/current_step, total_acc/current_step))
                     print("\nEvaluation:")
                     dev_step(x_dev, y_dev, writer=dev_summary_writer)
                     print("")
@@ -233,7 +278,8 @@ def train_cnn():
             """Step 7: Test trained model on test dataset"""
             test_batches = data_helper.batch_iter(list(zip(x_test, y_test)), params['batch_size'], 1)
             total_test_correct = 0
-            predictions = []
+            y_predicted = []
+            y_tested = []
             for test_batch in test_batches:
                 # Check if batch is not empty
                 if len(test_batch) == 0:
@@ -242,6 +288,7 @@ def train_cnn():
 
                 # Zip sentences and labels into one list
                 x_test_batch, y_test_batch = zip(*test_batch)
+                print('hello')
 
                 # Run validation function on test batch
                 num_test_correct, y_pred = dev_step(x_test_batch, y_test_batch)
@@ -250,8 +297,10 @@ def train_cnn():
                 # Calculate total number of correct predictions
                 total_test_correct += num_test_correct
 
-                # Store predictions
-                predictions.append(y_pred)
+                # Store predicted and correct labels
+                y_predicted.append(y_pred)
+                y_tested.append(y_test_batch)
+
                 batch_num += 1
 
             # Calculate testing accuracy of the model
@@ -285,17 +334,25 @@ def train_cnn():
         with open(out_dir + '/trained_parameters.json', 'w') as outfile:
             json.dump(params, outfile, indent=4, sort_keys=True, ensure_ascii=False)
 
+        y_tested = [item for sublist in y_tested for item in sublist]
+
         # Convert test labels from one hot into integer format
-        y_test_class = np.argmax(y_test, axis=1)
+        y_tested = np.argmax(y_tested, axis=1)
+
+        # Transform original and predictions arrays into a 1d lists
+        y_predicted = [item for sublist in y_predicted for item in sublist]
 
         # Print classification report
-        print(classification_report(y_test_class, predictions, target_names=classes))
+        print(classification_report(y_tested, y_predicted, target_names=classes))
 
         # Create confusion matrix
-        cnf_matrix = confusion_matrix(y_test_class, predictions)
-        # plt.figure(figsize=(20, 10))
-        fig = data_helper.plot_confusion_matrix(cnf_matrix, labels=classes)
-        plt.show(fig)
+        cnf_matrix = confusion_matrix(y_tested, y_predicted)
+
+        # Plot and store confusion matrix in a png file
+        plt.figure()
+        data_helper.plot_confusion_matrix(cnf_matrix, labels=classes)
+        plt.show()
+        plt.savefig(out_dir + '/confusion_matrix.png')
 
         logging.critical('The training is complete')
 

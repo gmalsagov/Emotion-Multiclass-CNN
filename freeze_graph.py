@@ -1,4 +1,4 @@
-import os, argparse
+import os
 
 import tensorflow as tf
 
@@ -28,7 +28,6 @@ def create_graph(model_dir):
         tf.train.write_graph(tf_graph.as_graph_def(), model_dir, 'graph.pbtxt', as_text=True)
 
 
-
 def freeze_graph(model_dir):
     """Extract the sub graph defined by the output nodes and convert
     all its variables into constant
@@ -50,10 +49,6 @@ def freeze_graph(model_dir):
     checkpoint = tf.train.get_checkpoint_state(model_dir)
     input_checkpoint = checkpoint.model_checkpoint_path
 
-    # We precise the file fullname of our freezed graph
-    absolute_model_dir = "/".join(input_checkpoint.split('/')[:-1])
-    # output_graph = absolute_model_dir + "/graph.pbtxt"
-
     output_node_names = 'output/predictions'
 
     # We clear devices to allow TensorFlow to control on which device it will load operations
@@ -73,27 +68,13 @@ def freeze_graph(model_dir):
             tf.get_default_graph().as_graph_def(),  # The graph_def is used to retrieve the nodes
             output_node_names.split(",")  # The output node names are used to select the useful nodes
         )
-        with tf.gfile.FastGFile('./cnn-embeddings/trained_model_1534172737/checkpoints/frozen_model.pb', 'wb') as f:
+        graph_dir = model_dir + 'frozen_model.pb'
+
+        # Serialize and save the output graph to the file
+        with tf.gfile.FastGFile(graph_dir, 'wb') as f:
             f.write(output_graph_def.SerializeToString())
 
-        # Finally we serialize and dump the output graph to the filesystem
-        # with tf.gfile.GFile(output_graph, "wb") as f:
-        #     f.write(output_graph_def.SerializeToString())
         print("%d ops in the final graph." % len(output_graph_def.node))
 
-
-
-    # return output_graph_def
-
-# if __name__ == '__main__':
-#     parser = argparse.ArgumentParser()
-#     parser.add_argument("--model_dir", type=str, default="", help="Model folder to export")
-#     parser.add_argument("--output_node_names", type=str, default="",
-#                         help="The name of the output nodes, comma separated.")
-#     args = parser.parse_args()
-
-    # freeze_graph(args.model_dir, args.output_node_names)
-
 # create_graph('cnn-embeddings/64%_trained_model/checkpoints')
-#
-freeze_graph('cnn-embeddings/trained_model_1534172737/checkpoints')
+freeze_graph('cnn-embeddings/trained_model_1534255535/checkpoints/')
