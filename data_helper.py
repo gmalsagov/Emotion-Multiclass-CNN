@@ -550,6 +550,8 @@ def plot_confusion_matrix(cm, labels,
 
     #print(cm)
 
+    fig = plt.figure()
+
     plt.imshow(cm, interpolation='nearest', cmap=cmap)
     plt.title(title)
     plt.colorbar()
@@ -567,7 +569,10 @@ def plot_confusion_matrix(cm, labels,
     plt.tight_layout()
     plt.ylabel('True label')
     plt.xlabel('Predicted label')
-    plt.show()
+
+    # plt.show()
+    return fig
+
 
 if __name__ == "__main__":
 

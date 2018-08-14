@@ -17,12 +17,16 @@ from sklearn.metrics import classification_report, confusion_matrix
 
 logging.getLogger().setLevel(logging.INFO)
 
+
 def train_cnn():
-    """Step 0: load sentences, labels, and training parameters"""
+    """Step 1: load test and train data and training parameters"""
+
+    # Relative path to datasets
     # train_file = '../data/iseardataset.csv'
     test_set = '../data/isear_test.csv'
     train_set = '../data/isear_train.csv'
 
+    # Classes to be predicted
     classes = ["joy", "fear", "anger", "sadness", "disgust", "shame", "guilt"]
     # classes = ["fear", "anger", "sadness", "disgust", "shame", "guilt"]
 
@@ -35,10 +39,11 @@ def train_cnn():
     # Load test data
     x_test, y_test, vocabulary1, df1 = data_helper.load(test_set)
 
+    # Load parameters
     parameter_file = '../training_config.json'
     params = json.loads(open(parameter_file).read())
 
-    """Step 1: pad each sentence to the same length and map each word to an id"""
+    """Step 2: padding each sentence to the same length and mapping each word to an id"""
     max_document_length = max([len(x.split(' ')) for x in x_raw])
     max_document_length2 = max([len(x.split(' ')) for x in x_test])
     if max_document_length2 > max_document_length:
@@ -48,23 +53,22 @@ def train_cnn():
     vocab_processor = learn.preprocessing.VocabularyProcessor(max_document_length)
     x = np.array(list(vocab_processor.fit_transform(x_raw)))
     y = np.array(y_raw)
-
     x_test = np.array(list(vocab_processor.fit_transform(x_test)))
 
-    """Step 3: shuffle the train set and split the train set into train and dev sets"""
+    """Step 3: shuffle and split the train set into train and dev sets"""
     shuffle_indices = np.random.permutation(np.arange(len(y_raw)))
     x_shuffled = x[shuffle_indices]
     y_shuffled = y[shuffle_indices]
     x_train, x_dev, y_train, y_dev = train_test_split(x_shuffled, y_shuffled, test_size=0.1)
 
-    """Step 4: save the labels into labels.json since predict.py needs it"""
+    """Step 4: save the labels into labels.json for prediction later"""
     with open('./labels.json', 'w') as outfile:
         json.dump(classes, outfile, indent=4)
 
     logging.info('x_train: {}, x_dev: {}, x_test: {}'.format(len(x_train), len(x_dev), len(x_test)))
     logging.info('y_train: {}, y_dev: {}, y_test: {}'.format(len(y_train), len(y_dev), len(y_test)))
 
-    """Step 5: build a graph and cnn object"""
+    """Step 5: build a graph and instantiate cnn class"""
     graph = tf.Graph()
     with graph.as_default():
         session_conf = tf.ConfigProto(allow_soft_placement=True, log_device_placement=False)
@@ -79,13 +83,13 @@ def train_cnn():
                 num_filters=params['num_filters'],
                 l2_reg_lambda=params['l2_reg_lambda'])
 
-            # Optimizing our loss function using Adam's optimizer
+            # Optimization of the loss function using Adam's optimizer
             global_step = tf.Variable(0, name="global_step", trainable=False)
             optimizer = tf.train.AdamOptimizer(1e-3)
             grads_and_vars = optimizer.compute_gradients(cnn.loss)
             train_op = optimizer.apply_gradients(grads_and_vars, global_step=global_step)
 
-            # Keep track of gradient values and sparsity (optional)
+            # Summarizing gradient values and sparsity for further analysis (not essential)
             grad_summaries = []
             for g, v in grads_and_vars:
                 if g is not None:
@@ -95,13 +99,13 @@ def train_cnn():
                     grad_summaries.append(sparsity_summary)
             grad_summaries_merged = tf.summary.merge(grad_summaries)
 
+            # Specifying the path where to store trained model
             timestamp = str(int(time.time()))
             out_dir = os.path.abspath(os.path.join(os.path.curdir, "trained_model_" + timestamp))
             print("Writing to {}\n".format(out_dir))
 
             # Summary for predictions
             # predictions_summary = tf.summary.scalar("predictions", cnn.predictions)
-
 
             # Summaries for loss and accuracy
             loss_summary = tf.summary.scalar("loss", cnn.loss)
@@ -117,31 +121,41 @@ def train_cnn():
             dev_summary_dir = os.path.join(out_dir, "summaries", "dev")
             dev_summary_writer = tf.summary.FileWriter(dev_summary_dir, sess.graph)
 
+            # Path for checkpoints
             checkpoint_dir = os.path.abspath(os.path.join(out_dir, "checkpoints"))
             checkpoint_prefix = os.path.join(checkpoint_dir, "model")
             if not os.path.exists(checkpoint_dir):
                 os.makedirs(checkpoint_dir)
             saver = tf.train.Saver(tf.global_variables())
 
-            # One training step: train the model with one batch
+            # Training step: train the model with one train batch
             def train_step(x_batch, y_batch, total_steps):
+
+                # Store inputs into a dictionary
                 feed_dict = {
                     cnn.input_x: x_batch,
                     cnn.input_y: y_batch,
                     cnn.dropout_keep_prob: params['dropout_keep_prob']}
+
+                # Specify inputs and outputs of the training step
                 _, step, summaries, loss, acc = sess.run(
                     [train_op, global_step, train_summary_op, cnn.loss, cnn.accuracy], feed_dict)
                 time_str = datetime.datetime.now().isoformat()
                 print("{}: step {} / {}, loss {:g}, acc {:g}".format(time_str, step, total_steps, loss, acc))
                 train_summary_writer.add_summary(summaries, step)
 
-            # One evaluation step: evaluate the model with one batch
+            # Validation step: evaluate the model with one dev batch
             def dev_step(x_batch, y_batch, writer=None):
+
+                # Store inputs into a dictionary
                 feed_dict = {cnn.input_x: x_batch, cnn.input_y: y_batch,
                              cnn.dropout_keep_prob: 1.0}
+
+                # Specify inputs and outputs of the dev step
                 step, summaries, loss, acc, num_correct, predictions = \
                     sess.run([global_step, dev_summary_op, cnn.loss, cnn.accuracy, cnn.num_correct, cnn.predictions],
                              feed_dict)
+                # Store summary of dev step
                 if writer:
                     writer.add_summary(summaries, step)
                 return num_correct, predictions
@@ -150,20 +164,23 @@ def train_cnn():
 
             print "Loading Embeddings..."
 
+            # Specify path and dimensions of word embeddings
             embedding_dimension = 300
             # embedding_dir = '../embeddings/glove.twitter.27B/glove.twitter.27B.200d.txt'
             embedding_dir = '../GoogleNews-vectors-negative300.bin'
             # embedding_dir = '../embeddings/glove.6B/glove.6B.300d.txt'
 
+            # Load word embeddings
             # embeddings = data_helper.load_embedding_vectors_glove(vocabulary, embedding_dir, embedding_dimension)
             embeddings = data_helper.load_embedding_vectors_word2vec(vocab_processor.vocabulary_,
                                                                 embedding_dir, embedding_dimension)
 
+            # Assign pre-trained word embeddings to weights parameter
             sess.run(cnn.W.assign(embeddings))
 
             print "Embeddings Loaded!"
 
-            # Training starts here
+            # Training
             train_batches = data_helper.batch_iter(list(zip(x_train, y_train)), params['batch_size'],
                                                    params['num_epochs'])
             best_accuracy, best_at_step = 0, 0
@@ -213,61 +230,77 @@ def train_cnn():
             batch_num = 1
             num_batches = int(len(x_test) / batch_size) + 1
 
-            """Step 7: predict x_test (batch by batch)"""
+            """Step 7: Test trained model on test dataset"""
             test_batches = data_helper.batch_iter(list(zip(x_test, y_test)), params['batch_size'], 1)
             total_test_correct = 0
+            predictions = []
             for test_batch in test_batches:
+                # Check if batch is not empty
                 if len(test_batch) == 0:
                     continue
                 print "Testing " + str(batch_num) + "/" + str(num_batches)
+
+                # Zip sentences and labels into one list
                 x_test_batch, y_test_batch = zip(*test_batch)
+
+                # Run validation function on test batch
                 num_test_correct, y_pred = dev_step(x_test_batch, y_test_batch)
                 print("Correct: " + str(num_test_correct) + "/" + str(len(y_test_batch)))
+
+                # Calculate total number of correct predictions
                 total_test_correct += num_test_correct
+
+                # Store predictions
+                predictions.append(y_pred)
                 batch_num += 1
 
+            # Calculate testing accuracy of the model
             test_accuracy = (float(total_test_correct) / len(y_test))*100
 
+            # Calculate train accuracy of the model
             train_batches = data_helper.batch_iter(list(zip(x_train, y_train)), params['batch_size'], 1)
 
             for train_batch in train_batches:
                 if len(train_batch) == 0:
                     continue
+
                 x_train_batch, y_train_batch = zip(*train_batch)
+
                 num_test_correct, y_ = dev_step(x_train_batch, y_train_batch)
                 total_train_correct += num_test_correct
                 batch_num += 1
 
+            # Calculate train accuracy
             train_accuracy = (float(total_train_correct) / len(y_train))*100
 
         print 'Accuracy on test set is {} based on the best model'.format(test_accuracy)
         print 'Accuracy on train set is {} based on the best model'.format(train_accuracy)
 
-        # Save trained parameters and files for prediction
-        vocab_processor.save(out_dir + '/vocabulary')
+        # Save trained parameters and files for prediction later
+        vocab_processor.save(out_dir + '/vocabulary.pickle')
         with open(out_dir + '/embeddings.pickle', 'wb') as outfile:
             pickle.dump(embeddings, outfile, pickle.HIGHEST_PROTOCOL)
         with open(out_dir + '/labels.json', 'w') as outfile:
             json.dump(classes, outfile, indent=4, ensure_ascii=False)
-
-        params['sequence_length'] = x_train.shape[1]
         with open(out_dir + '/trained_parameters.json', 'w') as outfile:
             json.dump(params, outfile, indent=4, sort_keys=True, ensure_ascii=False)
 
-        # Convert one hot into integer
-        y_test_class = np.argmax(y_test_batch, axis=1)
+        # Convert test labels from one hot into integer format
+        y_test_class = np.argmax(y_test, axis=1)
 
-        print(classification_report(y_test_class, y_pred, target_names=classes))
+        # Print classification report
+        print(classification_report(y_test_class, predictions, target_names=classes))
 
         # Create confusion matrix
-        cnf_matrix = confusion_matrix(y_test_class, y_pred)
-        plt.figure(figsize=(20, 10))
-        data_helper.plot_confusion_matrix(cnf_matrix, labels=classes)
+        cnf_matrix = confusion_matrix(y_test_class, predictions)
+        # plt.figure(figsize=(20, 10))
+        fig = data_helper.plot_confusion_matrix(cnf_matrix, labels=classes)
+        plt.show(fig)
 
         logging.critical('The training is complete')
 
 
 if __name__ == '__main__':
-    """Type this into command line"""
+    """Run this command to start the script."""
     # pythonw train_embeddings.py
     train_cnn()

@@ -11,30 +11,27 @@ from tensorflow.contrib import learn
 from sklearn.model_selection import train_test_split
 
 
-def preprocess(wordid):
-    file = "data/isear_test.csv"
+def preprocess(inputs, wordid):
+    """Pre-process input data by cleaning text and mapping words onto integer id's."""
 
+    # Load pre-trained vocabulary
     words_index = learn.preprocessing.VocabularyProcessor.restore(wordid)
 
+    # Load inputs to be classified
+    x_text, y, vocab, df = data_helper.load(inputs)
 
-    x_text, y, vocab, df = data_helper.load(file)
-
-    # x_text = data_helper.pad_sentences(x_text, forced_sequence_length=179)
-
-    # Build vocabulary
-    max_document_length = max([len(x) for x in x_text])
-    # vocab_processor = learn.preprocessing.VocabularyProcessor(179)
+    # Map sentences onto exitsting vocabulary
     x = np.array(list(words_index.fit_transform(x_text)))
 
     return x, y
 
 
 def open_graph(graph_dir):
+    """Open TensorFlow graph from directory."""
 
-    graph_def = tf.GraphDef()
     with tf.gfile.Open(graph_dir, 'rb') as f:
-        data = f.read()
-        graph_def.ParseFromString(data)
+        graph_def = tf.GraphDef()
+        graph_def.ParseFromString(f.read())
 
     # Then, we import the graph_def into a new Graph and returns it
     with tf.Graph().as_default() as graph:
@@ -44,29 +41,45 @@ def open_graph(graph_dir):
 
     return graph
 
+
 def save_graph(graph_nodes, name):
+    """Store TensorFlow graph."""
     output_graph = graph_pb2.GraphDef()
     output_graph.node.extend(graph_nodes)
     with tf.gfile.GFile(name + '.pb', 'w') as f:
         f.write(output_graph.SerializeToString())
 
 
-def display_nodes(graph):
+def display_nodes(graph_def):
+    """Visualize TensorFlow graph."""
+    # Check if graph has attribute 'as_graph_def'
+    if hasattr(graph_def, 'as_graph_def'):
+        graph_def = graph_def.as_graph_def()
 
-    for i, node in enumerate(graph.node):
+    for i, node in enumerate(graph_def.node):
         print('%d %s %s' % (i, node.name, node.op))
         [print(u'└─── %d ─ %s' % (i, n)) for i, n in enumerate(node.input)]
 
 
 def accuracy(predictions, labels):
+    """Calculate Accuracy of TensorFlow graph."""
     return 100.0 * np.sum(predictions == np.argmax(labels, axis=1)) / predictions.shape[0]
 
 
 def test_graph(graph_path, use_dropout):
+    """Run script to test the graphs on given inputs."""
+
     tf.reset_default_graph()
     graph_def = tf.GraphDef()
 
-    sentences, labels = preprocess('cnn-embeddings/trained_model_1534172737/vocabulary')
+    inputs = "data/isear_test.csv"
+
+    vocabulary = graph_path
+    if vocabulary.endswith('checkpoints'):
+        vocabulary = vocabulary[:-11]
+    vocabulary = vocabulary + 'vocabulary'
+
+    sentences, labels = preprocess(vocabulary, inputs)
 
     with tf.gfile.FastGFile(graph_path, 'rb') as f:
         graph_def.ParseFromString(f.read())
@@ -91,36 +104,45 @@ def test_graph(graph_path, use_dropout):
     result = accuracy(predictions, labels[:len(sentences)])
     return result
 
+def remove_dropout(graph_dir):
 
-# read frozen graph and display nodes
-graph_dir = './cnn-embeddings/trained_model_1534172737/checkpoints/frozen_model.pb'
+    # read frozen graph and display nodes
+    # graph_dir = './cnn-embeddings/trained_model_1534172737/checkpoints/frozen_model.pb'
 
-graph = open_graph(graph_dir)
+    graph = open_graph(graph_dir + 'frozen_model.pb')
 
-display_nodes(graph)
-#
-# # Connect #52 'output/scores/Matmul' node to output of 'Reshape' node #43
-# graph.node[52].input[0] = 'Reshape'
-#
-# # Remove dropout nodes
-# nodes = graph.node[:44] + graph.node[52:] # 44 -> output/scores
-#
-# del nodes[5] # 5 dropout
-# del nodes[5] # 6 dropout
-# del nodes[5] # 7 dpopout
-# del nodes[23] # 23 -> keep_prob
-#
-# save_graph(nodes, 'cnn-embeddings/64%_trained_model/checkpoints/frozen_embeddings_no_dropout')
-#
-# processed_graph = open_graph('./cnn-embeddings/64%_trained_model/checkpoints/frozen_embeddings_no_dropout.pb')
-#
-# print("New Graph:")
-# print("")
-# display_nodes(processed_graph)
+    display_nodes(graph)
 
-# # Check model accuracy
-# result_1 = test_graph('./cnn-embeddings/trained_model_1534172737/checkpoints/frozen_model.pb', use_dropout=True)
-# result_2 = test_graph('./cnn-embeddings/trained_model_1534163991/checkpoints/frozen_embeddings_no_dropout.pb', use_dropout=False)
-# print('Accuracy with dropout: %f' % result_1)
-# # print('Accuracy without dropout: %f' % result_2)
+    if hasattr(graph, 'as_graph_def'):
+        graph = graph.as_graph_def()
+
+    # Connect #52 'output/scores/Matmul' node to output of 'Reshape' node #43
+    graph.node[52].input[0] = 'prefix/Reshape'
+
+    # Remove dropout nodes
+    nodes = graph.node[:44] + graph.node[52:] # 44 -> output/scores
+
+    del nodes[5] # 5 dropout
+    del nodes[5] # 6 dropout
+    del nodes[5] # 7 dpopout
+    del nodes[23] # 23 -> keep_prob
+
+    save_graph(nodes, graph_dir + 'frozen_model_no_dropout')
+
+    processed_graph = open_graph(graph_dir + 'frozen_model_no_dropout.pb')
+
+    print("New Graph:")
+    print("")
+    display_nodes(processed_graph)
+
+
+graph_dir = './cnn-embeddings/trained_model_1534172737/checkpoints/'
 #
+# remove_dropout(graph_dir)
+
+# Check model accuracy
+result_1 = test_graph(graph_dir + 'frozen_model.pb', use_dropout=True)
+result_2 = test_graph(graph_dir + 'frozen_embeddings_no_dropout.pb', use_dropout=False)
+print('Accuracy with dropout: %f' % result_1)
+print('Accuracy without dropout: %f' % result_2)
+
