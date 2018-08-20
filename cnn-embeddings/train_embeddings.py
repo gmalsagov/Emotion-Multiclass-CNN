@@ -69,10 +69,12 @@ def train_cnn():
     params = json.loads(open(parameter_file).read())
 
     """Step 2: Padding each sentence to the same length and mapping each word to an id"""
-    max_document_length = max([len(x.split(' ')) for x in x_raw])
-    max_document_length2 = max([len(x.split(' ')) for x in x_test])
-    if max_document_length2 > max_document_length:
-        max_document_length = max_document_length2
+    # max_document_length = max([len(x.split(' ')) for x in x_raw])
+    # max_document_length2 = max([len(x.split(' ')) for x in x_test])
+    # if max_document_length2 > max_document_length:
+    #     max_document_length = max_document_length2
+
+    max_document_length = 40
 
     logging.info('The maximum length of all sentences: {}'.format(max_document_length))
     vocab_processor = learn.preprocessing.VocabularyProcessor(max_document_length)
@@ -193,7 +195,7 @@ def train_cnn():
             # Initialise global variables
             sess.run(tf.global_variables_initializer())
 
-            print "Loading Embeddings..."
+            print "Loading Word Embeddings..."
 
             # Specify path and dimensions of word embeddings
             # embedding_dir = '../embeddings/glove.twitter.27B/glove.twitter.27B.200d.txt'
@@ -202,23 +204,22 @@ def train_cnn():
 
             embedding_dimension = 300
 
-
             # Load pre-trained word embeddings
             # embeddings = data_helper.load_embedding_vectors_glove(vocabulary, embedding_dir, embedding_dimension)
             embeddings = data_helper.load_embedding_vectors_word2vec(vocab_processor.vocabulary_,
                                                                 embedding_dir, embedding_dimension)
 
+            # embeddings = np.expand_dims(embeddings, -1)
+            # print()
             # Assign pre-trained word embeddings to weights parameter
             sess.run(cnn.W.assign(embeddings))
 
-            print "Embeddings Loaded!"
+            print "Word Embeddings Loaded!"
 
             # Training
             train_batches = data_helper.batch_iter(list(zip(x_train, y_train)), params['batch_size'],
                                                    params['num_epochs'])
             best_accuracy, best_at_step = 0, 0
-
-            total_loss, total_acc = 0, 0
 
             # Initialise parameters
             batch_size = params['batch_size']
@@ -227,6 +228,8 @@ def train_cnn():
 
             """Step 6: train the cnn model with x_train and y_train (batch by batch)"""
             for train_batch in train_batches:
+                batch_loss, batch_acc = 0, 0
+
                 if len(train_batch) == 0:
                     continue
                 # Zip x and y lists into single list
@@ -236,14 +239,14 @@ def train_cnn():
                 loss, acc = train_step(x_train_batch, y_train_batch, total_steps)
 
                 # Sum up total loss and accuracy
-                total_loss += loss
-                total_acc += acc
+                batch_loss += loss
+                batch_acc += acc
 
                 current_step = tf.train.global_step(sess, global_step)
 
                 """Step 6.1: evaluate the model with x_dev and y_dev (batch by batch)"""
                 if current_step % params['evaluate_every'] == 0:
-                    print("Average per step: loss {:g}, acc {:g}".format(total_loss/current_step, total_acc/current_step))
+                    print("Average per batch: loss {:g}, acc {:g}".format(batch_loss/current_step, batch_acc/current_step))
                     print("\nEvaluation:")
                     dev_step(x_dev, y_dev, writer=dev_summary_writer)
                     print("")

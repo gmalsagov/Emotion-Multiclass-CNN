@@ -11,8 +11,20 @@ from tensorflow.contrib import learn
 from sklearn.model_selection import train_test_split
 
 
+# Custom Exception for incorrect path error handling
+class IncorrectPathError(Exception):
+    def __init__(self, message):
+
+        super(IncorrectPathError, self).__init__(message)
+
+
 def preprocess(inputs, wordid):
     """Pre-process input data by cleaning text and mapping words onto integer id's."""
+
+    # Check if path contains pb file else throw exception
+    if not wordid.endswith('.pickle'):
+        raise IncorrectPathError(
+            message="Oops! The specified path: " + wordid + " doesn't contain vocabulary in correct format (.pickle)")
 
     # Load pre-trained vocabulary
     words_index = learn.preprocessing.VocabularyProcessor.restore(wordid)
@@ -28,6 +40,11 @@ def preprocess(inputs, wordid):
 
 def open_graph(graph_dir):
     """Open TensorFlow graph from directory."""
+
+    # Check if path contains pb file else throw exception
+    if not graph_dir.endswith('.pb'):
+        raise IncorrectPathError(
+            message="Oops! The specified path: " + graph_dir + " doesn't contain graph in correct format (.pb)")
 
     with tf.gfile.Open(graph_dir, 'rb') as f:
         graph_def = tf.GraphDef()
@@ -45,12 +62,17 @@ def open_graph(graph_dir):
 def save_graph(graph_nodes, name):
     """Store TensorFlow graph."""
 
+    # Check if path contains pb file else throw exception
+    if not name.endswith('.pb'):
+        raise IncorrectPathError(
+            message="Oops! The path: " + name + " doesn't contain graph format (.pb)")
+
     # Create default graph
     output_graph = graph_pb2.GraphDef()
 
     # Add nodes to default graph
     output_graph.node.extend(graph_nodes)
-    with tf.gfile.GFile(name + '.pb', 'w') as f:
+    with tf.gfile.GFile(name, 'w') as f:
         f.write(output_graph.SerializeToString())
 
 
@@ -76,6 +98,11 @@ def accuracy(predictions, labels):
 def test_graph(model_path, graph_path, use_dropout):
     """Run script to test the graphs' accuracy on given inputs."""
 
+    # Check if path contains pb file else throw exception
+    if not graph_path.endswith('.pb'):
+        raise IncorrectPathError(
+            message="Oops! The specified path: " + graph_path + " doesn't contain graph in correct format (.pb)")
+
     tf.reset_default_graph()
     graph_def = tf.GraphDef()
 
@@ -88,7 +115,7 @@ def test_graph(model_path, graph_path, use_dropout):
         vocabulary = vocabulary[:-12]
     vocabulary = vocabulary + 'vocabulary.pickle'
 
-    # Preprocess inputs and labels
+    # Pre-process inputs and labels
     sentences, labels = preprocess(inputs, vocabulary)
 
     # Read the graph
@@ -101,6 +128,7 @@ def test_graph(model_path, graph_path, use_dropout):
                             return_elements = None,
                             name = ""
                             )
+
     # Create TF session and specify input nodes
     sess = tf.Session(graph=graph)
     prediction_tensor = sess.graph.get_tensor_by_name('output/predictions:0')
@@ -128,6 +156,9 @@ def remove_dropout(graph_dir):
 
     Therefore, one must be careful when using this function"""
 
+    # Check the correct format of path string
+    if not graph_dir.endswith('/'):
+        graph_dir = graph_dir + '/'
 
     # read frozen graph and display nodes
     graph = open_graph(graph_dir + 'frozen_model.pb')
@@ -135,42 +166,43 @@ def remove_dropout(graph_dir):
 
     if hasattr(graph, 'as_graph_def'):
         graph = graph.as_graph_def()
+    #
+    # # Connect #49 'output/scores/Matmul' node to output of 'Reshape' node #33
+    # graph.node[49].input[0] = 'Reshape'
+    #
+    # # Remove dropout nodes by connecting nodes 0-34 and 45-52
+    # nodes = graph.node[:34] + graph.node[45:] # 46 -> output/scores
+    #
+    # # Delete dropout placeholder node 1
+    # del nodes[1]
+    #
+    # # Save graph in the same directory
+    # save_graph(nodes, graph_dir + 'frozen_model_no_dropout.pb')
+    #
+    # # Load newly created graph
+    # processed_graph = open_graph(graph_dir + 'frozen_model_no_dropout.pb')
+    #
+    # if hasattr(processed_graph, 'as_graph_def'):
+    #     processed_graph = processed_graph.as_graph_def()
+    #
+    # print("\nNew Graph:")
+    # print("")
+    #
+    # # Visualize new graph
+    # display_nodes(processed_graph)
 
-    # Connect #52 'output/scores/Matmul' node to output of 'Reshape' node #43
-    graph.node[51].input[0] = 'Reshape'
-
-    # Remove dropout nodes
-    nodes = graph.node[:36] + graph.node[47:] # 46 -> output/scores
-
-    # Delete dropout placeholder node
-    del nodes[1]
-
-    # Save graph in the same directory
-    save_graph(nodes, graph_dir + 'frozen_model_no_dropout')
-
-    # Load newly created graph
-    processed_graph = open_graph(graph_dir + 'frozen_model_no_dropout.pb')
-
-    if hasattr(processed_graph, 'as_graph_def'):
-        processed_graph = processed_graph.as_graph_def()
-
-    print("\nNew Graph:")
-    print("")
-
-    # Visualize new graph
-    display_nodes(processed_graph)
 
 # Specify paths to model, frozen graph and stripped graph
-model_dir = './cnn-embeddings/trained_model_1534255535/checkpoints/'
+model_dir = './cnn-embeddings/trained_model_1534705311/checkpoints'
 graph_dir1 = model_dir + 'frozen_model.pb'
 graph_dir2 = model_dir + 'frozen_model_no_dropout.pb'
 
 # Remove dropout layer from the graph (might have to do it manually)
-# remove_dropout(model_dir)
+remove_dropout(model_dir)
 
 # Check model accuracy
-result_1 = test_graph(model_dir, graph_dir1, use_dropout=True)
-result_2 = test_graph(model_dir, graph_dir2, use_dropout=False)
-print('Accuracy with dropout: %f' % result_1)
-print('Accuracy without dropout: %f' % result_2)
+# result_1 = test_graph(model_dir, graph_dir1, use_dropout=True)
+# result_2 = test_graph(model_dir, graph_dir2, use_dropout=False)
+# print('Accuracy with dropout: %f' % result_1)
+# print('Accuracy without dropout: %f' % result_2)
 

@@ -19,21 +19,18 @@ from nltk.stem import SnowballStemmer
 from string import punctuation
 from keras.preprocessing.text import Tokenizer
 
-
 logging.getLogger().setLevel(logging.INFO)
 
-MAX_NB_WORDS = 20000
-MAX_SEQUENCE_LENGTH = 100
 
 def clean_text(text, remove_stopwords=False, stem_words=False):
 
-    # Remove puncuation
+    # Remove punctuation
     text = text.translate(None, punctuation)
 
-    # Convert words to lower case and split them
+    # Convert sentences to lower case and split into individual words
     text = text.lower().split()
 
-    # Remove stop words
+    # Remove stop words (Optional)
     if remove_stopwords:
         stops = set(stopwords.words("english"))
         text = [w for w in text if not w in stops and len(w) >= 3]
@@ -73,7 +70,7 @@ def clean_text(text, remove_stopwords=False, stem_words=False):
     text = strip_links(text)
     text = strip_all_entities(text)
 
-    # Stemming
+    # Stemming (Optional)
     if stem_words:
         text = text.split()
         stemmer = SnowballStemmer('english')
@@ -83,7 +80,7 @@ def clean_text(text, remove_stopwords=False, stem_words=False):
     return text
 
 
-# Removing URL's
+# Removing URL's from tweets
 def strip_links(text):
     link_regex    = re.compile('((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)', re.DOTALL)
     links         = re.findall(link_regex, text)
@@ -105,7 +102,9 @@ def strip_all_entities(text):
                 words.append(word)
     return ' '.join(words)
 
+
 def clean_str(s):
+    """NOT NEEDED ANYMORE"""
     s = re.sub(r"[^A-Za-z0-9:(),!?\'\`]", " ", s)
     s = re.sub(r" : ", ":", s)
     s = re.sub(r"\'s", " \'s", s)
@@ -170,6 +169,7 @@ def load_embedding_vectors_word2vec(vocabulary, filename, vector_size):
                     f.seek(binary_len, 1)
         f.close()
         return embedding_vectors
+
 
 def load_embedding_vectors_glove(vocabulary, filename, vector_size):
     # load embedding_vectors from the glove
@@ -241,6 +241,20 @@ def batch_iter(data, batch_size, num_epochs, shuffle=True):
             end_index = min((batch_num + 1) * batch_size, data_size)
             yield shuffled_data[start_index:end_index]
 
+
+def count_words(filename):
+    sentences, labels, vocabulary, df = load(filename)
+
+    num_words = []
+    for line in sentences:
+        counter = len(line.split())
+        num_words.append(counter)
+
+    num_files = len(num_words)
+
+    return num_files, num_words
+
+
 def load_data(filename):
 
     sentences = []
@@ -282,7 +296,6 @@ def load(filename):
     df = df.dropna(axis=0, how='any', subset=selected)
     df = df.reindex(np.random.permutation(df.index))
     df = df[0:100000]
-    print len(df)
 
     # Map the actual labels to one hot labels
     labels = sorted(list(set(df[selected[0]].tolist())))
@@ -320,6 +333,7 @@ def load4(path):
         f.close()
 
     return tweets, affect
+
 
 def split_train_test_data(filename):
 
@@ -548,7 +562,6 @@ def plot_confusion_matrix(cm, labels,
         #print('Confusion matrix, without normalization')
         pass
 
-    #print(cm)
 
     plt.imshow(cm, interpolation='nearest', cmap=cmap)
     plt.title(title)

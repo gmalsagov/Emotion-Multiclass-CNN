@@ -9,24 +9,32 @@ from tensorflow.python.framework import ops
 ops.reset_default_graph()
 import matplotlib.pyplot as plt
 from sklearn.metrics import classification_report, confusion_matrix
-from data_helper import loadData, randomize_data, plot_confusion_matrix, load
+import data_helper
+import itertools
 
 
 # Start a graph session
 sess = tf.Session()
 
-file_name = 'iseardataset.csv'
-test_set = './data/isear_test.csv'
-train_set = './data/isear_train.csv'
+"""Step 1: load test and train data and training parameters"""
+
+# Relative path to datasets
+# train_file = '../data/iseardataset.csv'
+test_set = '../data/isear_test.csv'
+train_set = '../data/isear_train.csv'
+
+# Classes to be predicted
+classes = ["joy", "fear", "anger", "sadness", "disgust", "shame", "guilt"]
+# classes = ["fear", "anger", "sadness", "disgust", "shame", "guilt"]
 
 # Load data
 print("Loading data...")
 
 # Load train/validation data
-x_text, y = load(train_set)
+x_raw, y_raw, vocabulary, df = data_helper.load(train_set)
 
 # Load test data
-x_test, y_test = load(test_set)
+x_test, y_test, vocabulary1, df1 = data_helper.load(test_set)
 
 # Choose max text word length at 40 to cover most data
 sentence_size = 40
@@ -36,8 +44,8 @@ min_word_freq = 3
 vocab_processor = learn.preprocessing.VocabularyProcessor(sentence_size, min_frequency=min_word_freq)
 
 # Have to fit transform to get length of unique words.
-vocab_processor.transform(x_text)
-transformed_texts = np.array([x for x in vocab_processor.transform(x_text)])
+vocab_processor.transform(x_raw)
+transformed_texts = np.array([x for x in vocab_processor.transform(x_raw)])
 embedding_size = len(np.unique(transformed_texts))
 print("Total words: " + str(embedding_size))
 
@@ -45,12 +53,12 @@ print("Total words: " + str(embedding_size))
 identity_mat = tf.diag(tf.ones(shape=[embedding_size]))
 
 # Create variables for logistic regression
-A = tf.Variable(tf.random_normal(shape=[embedding_size,1]))
-b = tf.Variable(tf.random_normal(shape=[1, 1, 7]))
+A = tf.Variable(tf.random_normal(shape=[embedding_size, 1]))
+b = tf.Variable(tf.random_normal(shape=[1, 1, y_raw.shape[1]]))
 
 # Initialize placeholders
-x_data = tf.placeholder(shape=[sentence_size], dtype=tf.int32)
-y_target = tf.placeholder(shape=[1, 1, 7], dtype=tf.float32)
+x_data = tf.placeholder(shape=[sentence_size], dtype=tf.int32, name="inputs_x")
+y_target = tf.placeholder(shape=[1, 1, y_raw.shape[1]], dtype=tf.float32, name="predictions")
 
 # Text-Vocab Embedding
 x_embed = tf.nn.embedding_lookup(identity_mat, x_data)
@@ -75,12 +83,14 @@ init = tf.global_variables_initializer()
 sess.run(init)
 
 # Start Logistic Regression
-print('Starting Training Over {} Sentences.'.format(len(x_text)))
+print('Starting Training Over {} Sentences.'.format(len(x_raw)))
 loss_vec = []
 train_acc_all = []
 train_acc_avg = []
-for ix, t in enumerate(vocab_processor.fit_transform(x_text)):
-    y_data = [[y[ix]]]
+
+"""Train Step"""
+for ix, t in enumerate(vocab_processor.fit_transform(x_raw)):
+    y_data = [[y_raw[ix]]]
 
     sess.run(train_step, feed_dict={x_data: t, y_target: y_data})
     temp_loss = sess.run(loss, feed_dict={x_data: t, y_target: y_data})
@@ -91,40 +101,67 @@ for ix, t in enumerate(vocab_processor.fit_transform(x_text)):
 
     # Keep trailing average of past 50 observations accuracy
     # Get prediction of single observation
-    [[temp_pred]] = sess.run(prediction, feed_dict={x_data: t, y_target: y_data})
+    y_pred = sess.run(prediction, feed_dict={x_data: t, y_target: y_data})
+    # y_pred = list(itertools.chain(*y_pred))
+
+    y_pred = [item for sublist in y_pred.tolist() for item in sublist]
+    # print(y_pred)
+    # Convert prediction and true vectors into an integer index
+    pred_val = np.argmax(y_pred, axis=1)
+    # print(pred_val)
+    true_val = np.argmax(y_raw[ix])
+
     # Get True/False if prediction is accurate
-    train_acc_temp = y[ix] == np.round(temp_pred)
+    train_acc_temp = true_val == pred_val
+
+    # Append accuracies to list
     train_acc_all.append(train_acc_temp)
     if len(train_acc_all) >= 50:
         train_acc_avg.append(np.mean(train_acc_all[-50:]))
 
-# Get test set accuracy
-print('Getting Test Set Accuracy For {} Sentences.'.format(len(x_text)))
+
+"""Testing Step"""
+print('Getting Test Set Accuracy For {} Sentences.'.format(len(x_test)))
 test_acc_all = []
+predictions = []
+true_vals = []
 for ix, t in enumerate(vocab_processor.fit_transform(x_test)):
     y_data = [[y_test[ix]]]
-    print("Y data: " + str(y_data))
+    # print("Y data: " + str(y_data))
 
     if (ix + 1) % 50 == 0:
         print('Test Observation #' + str(ix + 1))
 
         # Keep trailing average of past 50 observations accuracy
     # Get prediction of single observation
-    [[temp_pred]] = sess.run(prediction, feed_dict={x_data: t, y_target: y_data})
+    y_pred = sess.run(prediction, feed_dict={x_data: t, y_target: y_data})
+
+    y_pred = [item for sublist in y_pred.tolist() for item in sublist]
+
+    # Convert prediction and true vectors into an integer index
+    pred_val = np.argmax(y_pred, axis=1)
+    true_val = np.argmax(y_test[ix])
+
     # Get True/False if prediction is accurate
-    print("Temp_pred: " + str(np.round(temp_pred)))
-    # print("Y_pred: " + str(y_pred))
-    test_acc_temp = y_test[ix] == np.round(temp_pred)
+    test_acc_temp = true_val == pred_val
+
+    # Append accuracies to list
+    predictions.append(pred_val)
+    true_vals.append(true_val)
     test_acc_all.append(test_acc_temp)
 
-# classes = ["anger", "disgust", "fear", "guilt", "joy", "sadness", "shame"]
-
-# # Create confusion matrix
-# cnf_matrix = confusion_matrix(y_data, y_pred)
-# plt.figure(figsize=(20, 10))
-# plot_confusion_matrix(cnf_matrix, labels=classes)
-
 print('\nOverall Test Accuracy: {}'.format(np.mean(test_acc_all)))
+
+# Print classification report
+print(classification_report(true_vals, predictions, target_names=classes))
+
+# Create confusion matrix
+cnf_matrix = confusion_matrix(true_vals, predictions)
+
+plt.figure()
+# Plot and store confusion matrix in a png file
+data_helper.plot_confusion_matrix(cnf_matrix, labels=classes)
+plt.show()
 
 # Plot training accuracy over time
 plt.plot(range(len(train_acc_avg)), train_acc_avg, 'k-', label='Train Accuracy')

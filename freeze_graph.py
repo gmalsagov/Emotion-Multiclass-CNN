@@ -68,7 +68,7 @@ def freeze_graph(model_dir):
             tf.get_default_graph().as_graph_def(),  # The graph_def is used to retrieve the nodes
             output_node_names.split(",")  # The output node names are used to select the useful nodes
         )
-        graph_dir = model_dir + 'frozen_model.pb'
+        graph_dir = model_dir + '/frozen_model.pb'
 
         # Serialize and save the output graph to the file
         with tf.gfile.FastGFile(graph_dir, 'wb') as f:
@@ -76,5 +76,6 @@ def freeze_graph(model_dir):
 
         print("%d ops in the final graph." % len(output_graph_def.node))
 
+
 # create_graph('cnn-embeddings/64%_trained_model/checkpoints')
-freeze_graph('cnn-embeddings/trained_model_1534255535/checkpoints/')
+freeze_graph('cnn-embeddings/trained_model_1534708793/checkpoints')
