@@ -8,6 +8,8 @@ import time
 import datetime
 import sys
 
+import json
+
 sys.path.append('../')
 import data_helper
 from sklearn.model_selection import train_test_split
@@ -16,26 +18,29 @@ from tensorflow.contrib import learn
 
 # Parameters
 # ==================================================
+# Load parameters from a file
+parameter_file = '../training_config.json'
+params = json.loads(open(parameter_file).read())
 
 # Data loading params
-tf.flags.DEFINE_float("dev_sample_percentage", .1, "Percentage of the training data to use for validation")
-tf.flags.DEFINE_string("training_set", "../data/isear_train.csv", "Data source for the twitter data.")
-tf.flags.DEFINE_string("testing_set", "../data/isear_test.csv", "Data source for the twitter data.")
+tf.flags.DEFINE_string("training_set", "../data/isear_train.csv", "Data source for the train data.")
+tf.flags.DEFINE_string("testing_set", "../data/isear_test.csv", "Data source for the test data.")
 
 # Model Hyperparameters
-tf.flags.DEFINE_integer("embedding_dim", 128, "Dimensionality of character embedding (default: 128)")
-tf.flags.DEFINE_string("filter_sizes", "3,4,5", "Comma-separated filter sizes (default: '3,4,5')")
-tf.flags.DEFINE_integer("num_filters", 128, "Number of filters per filter size (default: 128)")
-tf.flags.DEFINE_boolean("is_training", True, "Dropout switch to convert into mobile (default: True")
-tf.flags.DEFINE_float("dropout_keep_prob", 0.5, "Dropout keep probability (default: 0.5)")
-tf.flags.DEFINE_float("l2_reg_lambda", 0.0, "L2 regularization lambda (default: 0.0)")
+embedding_dim = params['embedding_dim']
+filter_sizes = params['filter_sizes']; "Comma-separated filter sizes (default: '3,4,5')"
+num_filters = params['num_filters']; "Number of filters per filter size (default: 128)"
+is_training = params['is_training']; "Dropout switch to convert into mobile (default: True"
+dropout_keep_prob = params['dropout_keep_prob']; "Dropout keep probability (default: 0.5)"
+l2_reg_lambda = params['l2_reg_lambda']; "L2 regularization lambda (default: 0.0)"
 
 # Training parameters
-tf.flags.DEFINE_integer("batch_size", 128, "Batch Size (default: 64)")
-tf.flags.DEFINE_integer("num_epochs", 20, "Number of training epochs (default: 200)")
-tf.flags.DEFINE_integer("evaluate_every", 200, "Evaluate model on dev set after this many steps (default: 100)")
-tf.flags.DEFINE_integer("checkpoint_every", 200, "Save model after this many steps (default: 100)")
-tf.flags.DEFINE_integer("num_checkpoints", 5, "Number of checkpoints to store (default: 5)")
+batch_size = params['batch_size']; "Batch Size (default: 64)"
+num_epochs = params['num_epochs']; "Number of training epochs (default: 20)"
+evaluate_every = params['evaluate_every']; "Evaluate model on dev set after this many steps (default: 100)"
+checkpoint_every = params['checkpoint_every']; "Save model after this many steps (default: 100)"
+num_checkpoints = params['num_checkpoints']; "Number of checkpoints to store (default: 5)"
+
 # Misc Parameters
 tf.flags.DEFINE_boolean("allow_soft_placement", True, "Allow device soft device placement")
 tf.flags.DEFINE_boolean("log_device_placement", False, "Log placement of ops on devices")
@@ -96,9 +101,9 @@ def train(x_train, y_train, vocab_processor, x_dev, y_dev, x_test, y_test):
                 sequence_length=x_train.shape[1],
                 num_classes=y_train.shape[1],
                 vocab_size=len(vocab_processor.vocabulary_),
-                embedding_size=FLAGS.embedding_dim,
-                filter_sizes=list(map(int, FLAGS.filter_sizes.split(","))),
-                num_filters=FLAGS.num_filters)
+                embedding_size=embedding_dim,
+                filter_sizes=list(map(int, filter_sizes.split(","))),
+                num_filters=num_filters)
 
             # Define Training procedure
             global_step = tf.Variable(0, name="global_step", trainable=False)
@@ -140,7 +145,7 @@ def train(x_train, y_train, vocab_processor, x_dev, y_dev, x_test, y_test):
             checkpoint_prefix = os.path.join(checkpoint_dir, "model")
             if not os.path.exists(checkpoint_dir):
                 os.makedirs(checkpoint_dir)
-            saver = tf.train.Saver(tf.global_variables(), max_to_keep=FLAGS.num_checkpoints)
+            saver = tf.train.Saver(tf.global_variables(), max_to_keep=num_checkpoints)
 
             # Write vocabulary
             vocab_processor.save(os.path.join(out_dir, "vocab"))
@@ -155,7 +160,7 @@ def train(x_train, y_train, vocab_processor, x_dev, y_dev, x_test, y_test):
                 feed_dict = {
                     cnn.input_x: x_batch,
                     cnn.input_y: y_batch,
-                    cnn.dropout_keep_prob: FLAGS.dropout_keep_prob
+                    cnn.dropout_keep_prob: dropout_keep_prob
                 }
                 _, step, summaries, loss, accuracy = sess.run(
                     [train_op, global_step, train_summary_op, cnn.loss, cnn.accuracy],
@@ -186,7 +191,7 @@ def train(x_train, y_train, vocab_processor, x_dev, y_dev, x_test, y_test):
 
             # Generate batches
             train_batches = data_helper.batch_iter(
-                list(zip(x_train, y_train)), FLAGS.batch_size, FLAGS.num_epochs)
+                list(zip(x_train, y_train)), batch_size, num_epochs)
 
             # Training loop. For each batch...
             for batch in train_batches:
@@ -196,9 +201,9 @@ def train(x_train, y_train, vocab_processor, x_dev, y_dev, x_test, y_test):
 
                 writer = tf.summary.FileWriter('value/', sess.graph)
 
-                if current_step % FLAGS.evaluate_every == 0:
+                if current_step % evaluate_every == 0:
                     print("\nEvaluation:")
-                    dev_batches = data_helper.batch_iter(list(zip(x_dev, y_dev)), FLAGS.batch_size, 1)
+                    dev_batches = data_helper.batch_iter(list(zip(x_dev, y_dev)), batch_size, 1)
                     total_dev_correct = 0
 
                     # Validation loop
@@ -223,7 +228,7 @@ def train(x_train, y_train, vocab_processor, x_dev, y_dev, x_test, y_test):
             tf.train.write_graph(tf_graph.as_graph_def(), checkpoint_dir, 'graph.pbtxt', as_text=True)
 
             # Test model
-            test_batches = data_helper.batch_iter(list(zip(x_test, y_test)), FLAGS.batch_size, 1)
+            test_batches = data_helper.batch_iter(list(zip(x_test, y_test)), batch_size, 1)
             total_test_correct = 0
             for test_batch in test_batches:
                 if len(test_batch) == 0:
@@ -235,7 +240,7 @@ def train(x_train, y_train, vocab_processor, x_dev, y_dev, x_test, y_test):
 
             test_accuracy = (float(total_test_correct) / len(y_test)) * 100
 
-            train_batches = data_helper.batch_iter(list(zip(x_train, y_train)), FLAGS.batch_size, 1)
+            train_batches = data_helper.batch_iter(list(zip(x_train, y_train)), batch_size, 1)
 
             total_train_correct = 0
             for train_batch in train_batches:

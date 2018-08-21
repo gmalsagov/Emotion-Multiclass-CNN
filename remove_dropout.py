@@ -163,15 +163,15 @@ def remove_dropout(graph_dir):
     # read frozen graph and display nodes
     graph = open_graph(graph_dir + 'frozen_model.pb')
     display_nodes(graph)
-
-    if hasattr(graph, 'as_graph_def'):
-        graph = graph.as_graph_def()
+    #
+    # if hasattr(graph, 'as_graph_def'):
+    #     graph = graph.as_graph_def()
     #
     # # Connect #49 'output/scores/Matmul' node to output of 'Reshape' node #33
-    # graph.node[49].input[0] = 'Reshape'
+    # graph.node[51].input[0] = 'Reshape'
     #
     # # Remove dropout nodes by connecting nodes 0-34 and 45-52
-    # nodes = graph.node[:34] + graph.node[45:] # 46 -> output/scores
+    # nodes = graph.node[:36] + graph.node[47:] # 46 -> output/scores
     #
     # # Delete dropout placeholder node 1
     # del nodes[1]
@@ -193,7 +193,7 @@ def remove_dropout(graph_dir):
 
 
 # Specify paths to model, frozen graph and stripped graph
-model_dir = './cnn-embeddings/trained_model_1534705311/checkpoints'
+model_dir = './cnn-embeddings/trained_model_1534805020/checkpoints'
 graph_dir1 = model_dir + 'frozen_model.pb'
 graph_dir2 = model_dir + 'frozen_model_no_dropout.pb'
 

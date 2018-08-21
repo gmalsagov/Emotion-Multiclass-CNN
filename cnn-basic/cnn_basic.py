@@ -24,7 +24,18 @@ class TextCNN(object):
                 tf.random_uniform([vocab_size, embedding_size], -1.0, 1.0),
                 name="W")
             self.embedded_chars = tf.nn.embedding_lookup(W, self.input_x)
-            self.embedded_chars_expanded = tf.expand_dims(self.embedded_chars, -1)
+            # self.embedded_chars_expanded = tf.expand_dims(self.embedded_chars, -1)
+            # Determine shape of a tensor as list
+            shape = self.embedded_chars.get_shape().as_list()
+
+            # Remove None from list since reshape doesn't support NoneType as input
+            dim = shape[1:]
+            # Add -1 to provide non-fixed size and append 1 to produce a 4d list of ints
+            dim = [-1] + dim + [1]
+            print(dim)
+            self.embedded_chars_expanded = tf.reshape(self.embedded_chars, dim)
+            shape = self.embedded_chars_expanded.get_shape().as_list()
+            print(shape)
 
         pooled_outputs = []
         for i, filter_size in enumerate(filter_sizes):

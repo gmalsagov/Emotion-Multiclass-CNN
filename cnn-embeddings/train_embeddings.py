@@ -17,6 +17,43 @@ from sklearn.metrics import classification_report, confusion_matrix
 
 logging.getLogger().setLevel(logging.INFO)
 
+# Parameters
+# ==================================================
+# Load parameters from a file
+parameter_file = '../training_config.json'
+params = json.loads(open(parameter_file).read())
+
+# Data loading params
+tf.flags.DEFINE_string("training_set", "../data/isear_train.csv", "Data source for the train data.")
+tf.flags.DEFINE_string("testing_set", "../data/isear_test.csv", "Data source for the test data.")
+
+# Model Hyperparameters
+embedding_dim = params['embedding_dim']
+filter_sizes = params['filter_sizes']; "Comma-separated filter sizes (default: '3,4,5')"
+num_filters = params['num_filters']; "Number of filters per filter size (default: 128)"
+is_training = params['is_training']; "Dropout switch to convert into mobile (default: True"
+dropout_keep_prob = params['dropout_keep_prob']; "Dropout keep probability (default: 0.5)"
+l2_reg_lambda = params['l2_reg_lambda']; "L2 regularization lambda (default: 0.0)"
+
+# Training parameters
+batch_size = params['batch_size']; "Batch Size (default: 64)"
+num_epochs = params['num_epochs']; "Number of training epochs (default: 20)"
+evaluate_every = params['evaluate_every']; "Evaluate model on dev set after this many steps (default: 100)"
+checkpoint_every = params['checkpoint_every']; "Save model after this many steps (default: 100)"
+num_checkpoints = params['num_checkpoints']; "Number of checkpoints to store (default: 5)"
+
+# Misc Parameters
+tf.flags.DEFINE_boolean("allow_soft_placement", True, "Allow device soft device placement")
+tf.flags.DEFINE_boolean("log_device_placement", False, "Log placement of ops on devices")
+
+FLAGS = tf.flags.FLAGS
+
+# Specify path and dimensions of word embeddings
+# embedding_dir = '../embeddings/glove.twitter.27B/glove.twitter.27B.200d.txt'
+# embedding_dir = '../GoogleNews-vectors-negative300.bin'
+embedding_dir = '../embeddings/glove.6B/glove.6B.100d.txt'
+embedding_dim = 100
+
 
 def train_cnn():
     """This function does training, validation and testing on unseen data
@@ -43,7 +80,6 @@ def train_cnn():
      Examples:
     """
 
-
     """Step 1: load test and train data and training parameters"""
 
     # Relative path to datasets
@@ -59,14 +95,10 @@ def train_cnn():
     print("Loading data...")
 
     # Load train/validation data
-    x_raw, y_raw, vocabulary, df = data_helper.load(train_set)
+    x_raw, y_raw, vocabulary, df = data_helper.load(FLAGS.training_set)
 
     # Load test data
-    x_test, y_test, vocabulary1, df1 = data_helper.load(test_set)
-
-    # Load parameters from a file
-    parameter_file = '../training_config.json'
-    params = json.loads(open(parameter_file).read())
+    x_test, y_test, vocabulary1, df1 = data_helper.load(FLAGS.testing_set)
 
     """Step 2: Padding each sentence to the same length and mapping each word to an id"""
     # max_document_length = max([len(x.split(' ')) for x in x_raw])
@@ -107,10 +139,10 @@ def train_cnn():
                 sequence_length=x_train.shape[1],
                 num_classes=y_train.shape[1],
                 vocab_size=len(vocab_processor.vocabulary_),
-                embedding_size=params['embedding_dim'],
-                filter_sizes=list(map(int, params['filter_sizes'].split(","))),
-                num_filters=params['num_filters'],
-                l2_reg_lambda=params['l2_reg_lambda'])
+                embedding_size=embedding_dim,
+                filter_sizes=list(map(int, filter_sizes.split(","))),
+                num_filters=num_filters,
+                l2_reg_lambda=l2_reg_lambda)
 
             # Optimization of the loss function using Adam's optimizer
             global_step = tf.Variable(0, name="global_step", trainable=False)
@@ -197,19 +229,13 @@ def train_cnn():
 
             print "Loading Word Embeddings..."
 
-            # Specify path and dimensions of word embeddings
-            # embedding_dir = '../embeddings/glove.twitter.27B/glove.twitter.27B.200d.txt'
-            embedding_dir = '../GoogleNews-vectors-negative300.bin'
-            # embedding_dir = '../embeddings/glove.6B/glove.6B.300d.txt'
-
-            embedding_dimension = 300
-
             # Load pre-trained word embeddings
-            # embeddings = data_helper.load_embedding_vectors_glove(vocabulary, embedding_dir, embedding_dimension)
-            embeddings = data_helper.load_embedding_vectors_word2vec(vocab_processor.vocabulary_,
-                                                                embedding_dir, embedding_dimension)
-
-            # embeddings = np.expand_dims(embeddings, -1)
+            if "glove" in embedding_dir:
+                embeddings = data_helper.load_embedding_vectors_glove(vocab_processor.vocabulary_,
+                                                                      embedding_dir, embedding_dim)
+            elif "GoogleNews" in embedding_dir:
+                embeddings = data_helper.load_embedding_vectors_word2vec(vocab_processor.vocabulary_,
+                                                                    embedding_dir, embedding_dim)
             # print()
             # Assign pre-trained word embeddings to weights parameter
             sess.run(cnn.W.assign(embeddings))
@@ -226,9 +252,10 @@ def train_cnn():
             num_epochs = params['num_epochs']
             total_steps = int((len(x_train)/batch_size + 1) * num_epochs)
 
+            batch_loss, batch_acc = 0, 0
+
             """Step 6: train the cnn model with x_train and y_train (batch by batch)"""
             for train_batch in train_batches:
-                batch_loss, batch_acc = 0, 0
 
                 if len(train_batch) == 0:
                     continue
@@ -246,7 +273,11 @@ def train_cnn():
 
                 """Step 6.1: evaluate the model with x_dev and y_dev (batch by batch)"""
                 if current_step % params['evaluate_every'] == 0:
-                    print("Average per batch: loss {:g}, acc {:g}".format(batch_loss/current_step, batch_acc/current_step))
+                    print("Average per batch: loss {:g}, acc {:g}".format(batch_loss/params['evaluate_every'],
+                                                                          batch_acc/params['evaluate_every']))
+                    # Reset parameters to 0
+                    batch_loss, batch_acc = 0, 0
+
                     print("\nEvaluation:")
                     dev_step(x_dev, y_dev, writer=dev_summary_writer)
                     print("")
@@ -291,7 +322,7 @@ def train_cnn():
 
                 # Zip sentences and labels into one list
                 x_test_batch, y_test_batch = zip(*test_batch)
-                print('hello')
+                # print('hello')
 
                 # Run validation function on test batch
                 num_test_correct, y_pred = dev_step(x_test_batch, y_test_batch)

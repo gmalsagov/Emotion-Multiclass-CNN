@@ -78,4 +78,4 @@ def freeze_graph(model_dir):
 
 
 # create_graph('cnn-embeddings/64%_trained_model/checkpoints')
-freeze_graph('cnn-embeddings/trained_model_1534708793/checkpoints')
+freeze_graph('cnn-embeddings/trained_model_1534805020/checkpoints')
