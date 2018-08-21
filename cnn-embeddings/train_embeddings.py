@@ -28,7 +28,7 @@ tf.flags.DEFINE_string("training_set", "../data/isear_train.csv", "Data source f
 tf.flags.DEFINE_string("testing_set", "../data/isear_test.csv", "Data source for the test data.")
 
 # Model Hyperparameters
-embedding_dim = params['embedding_dim']
+embedding_dim = params['embedding_dim']; "Size of word embeddings (default: 300)"
 filter_sizes = params['filter_sizes']; "Comma-separated filter sizes (default: '3,4,5')"
 num_filters = params['num_filters']; "Number of filters per filter size (default: 128)"
 is_training = params['is_training']; "Dropout switch to convert into mobile (default: True"

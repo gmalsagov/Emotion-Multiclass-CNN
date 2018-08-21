@@ -35,17 +35,22 @@
 
 
 ### Parameters:
-  - batch_size:
-  - dropout_keep_prob:
-  - embedding_dim:
-  - evaluate_every:
-  - filter_sizes:
-  - hidden_unit:
-  - l2_reg_lambda:
-  - max_pool_size:
-  - non_static:
-  - num_epochs:
-  - num_filters:
+
+# Model Hyperparameters
+  - dropout_keep_prob: Dropout keep probability (default: 0.5)
+  - embedding_dim: Size of word embeddings (default: 300)
+  - filter_sizes: Comma-separated filter sizes (default: '3,4,5')
+  - num_filters: Number of filters per filter size (default: 128)
+  - l2_reg_lambda: L2 regularization lambda (default: 0.0)
+  - max_pool_size: Size of pooling window (default: 3)
+
+ # Training parameters
+  - batch_size: Batch Size (default: 128)
+  - num_epochs: Number of training epochs (default: 20)
+  - evaluate_every: Evaluate model on dev set after this many steps (default: 100)
+  - checkpoint_every: Save model after this many steps (default: 100)
+  - num_checkpoints: Number of checkpoints to store (default: 5)
+
 
 ### Requirements:
   ##Google Pre-trained News Word2Vec
