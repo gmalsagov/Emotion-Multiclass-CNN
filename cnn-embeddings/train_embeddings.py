@@ -51,7 +51,8 @@ FLAGS = tf.flags.FLAGS
 # Specify path and dimensions of word embeddings
 # embedding_dir = '../embeddings/glove.twitter.27B/glove.twitter.27B.200d.txt'
 # embedding_dir = '../GoogleNews-vectors-negative300.bin'
-embedding_dir = '../embeddings/glove.6B/glove.6B.100d.txt'
+# embedding_dir = '../embeddings/glove.6B/glove.6B.100d.txt'
+embedding_dir = '../embeddings/IMDB/imdb.100d.txt'
 embedding_dim = 100
 
 
@@ -81,11 +82,6 @@ def train_cnn():
     """
 
     """Step 1: load test and train data and training parameters"""
-
-    # Relative path to datasets
-    # train_file = '../data/iseardataset.csv'
-    test_set = '../data/isear_test.csv'
-    train_set = '../data/isear_train.csv'
 
     # Classes to be predicted
     classes = ["joy", "fear", "anger", "sadness", "disgust", "shame", "guilt"]
@@ -230,12 +226,13 @@ def train_cnn():
             print "Loading Word Embeddings..."
 
             # Load pre-trained word embeddings
-            if "glove" in embedding_dir:
+            if "glove" or "IMDB" in embedding_dir:
                 embeddings = data_helper.load_embedding_vectors_glove(vocab_processor.vocabulary_,
                                                                       embedding_dir, embedding_dim)
             elif "GoogleNews" in embedding_dir:
                 embeddings = data_helper.load_embedding_vectors_word2vec(vocab_processor.vocabulary_,
                                                                     embedding_dir, embedding_dim)
+
             # print()
             # Assign pre-trained word embeddings to weights parameter
             sess.run(cnn.W.assign(embeddings))
@@ -247,9 +244,7 @@ def train_cnn():
                                                    params['num_epochs'])
             best_accuracy, best_at_step = 0, 0
 
-            # Initialise parameters
-            batch_size = params['batch_size']
-            num_epochs = params['num_epochs']
+            # Measure steps
             total_steps = int((len(x_train)/batch_size + 1) * num_epochs)
 
             batch_loss, batch_acc = 0, 0

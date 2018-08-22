@@ -8,7 +8,6 @@ import tensorflow as tf
 import numpy as np
 import data_helper
 from tensorflow.contrib import learn
-from sklearn.model_selection import train_test_split
 
 
 # Custom Exception for incorrect path error handling
@@ -24,7 +23,8 @@ def preprocess(inputs, wordid):
     # Check if path contains pb file else throw exception
     if not wordid.endswith('.pickle'):
         raise IncorrectPathError(
-            message="Oops! The specified path: " + wordid + " doesn't contain vocabulary in correct format (.pickle)")
+            message="Oops! The specified path doesn't contain vocabulary file. "
+                    "Please specify path with correct file format (.pickle) %s" % wordid)
 
     # Load pre-trained vocabulary
     words_index = learn.preprocessing.VocabularyProcessor.restore(wordid)
@@ -113,6 +113,8 @@ def test_graph(model_path, graph_path, use_dropout):
     vocabulary = model_path
     if vocabulary.endswith('checkpoints/'):
         vocabulary = vocabulary[:-12]
+    elif vocabulary.endswith('checkpoints'):
+        vocabulary = vocabulary[:-11]
     vocabulary = vocabulary + 'vocabulary.pickle'
 
     # Pre-process inputs and labels
@@ -193,15 +195,15 @@ def remove_dropout(graph_dir):
 
 
 # Specify paths to model, frozen graph and stripped graph
-model_dir = './cnn-embeddings/trained_model_1534805020/checkpoints'
+model_dir = './cnn-embeddings/trained_model_1534708793/checkpoints/'
 graph_dir1 = model_dir + 'frozen_model.pb'
 graph_dir2 = model_dir + 'frozen_model_no_dropout.pb'
 
 # Remove dropout layer from the graph (might have to do it manually)
-remove_dropout(model_dir)
+# remove_dropout(model_dir)
 
 # Check model accuracy
-# result_1 = test_graph(model_dir, graph_dir1, use_dropout=True)
+result_1 = test_graph(model_dir, graph_dir1, use_dropout=True)
 # result_2 = test_graph(model_dir, graph_dir2, use_dropout=False)
 # print('Accuracy with dropout: %f' % result_1)
 # print('Accuracy without dropout: %f' % result_2)
